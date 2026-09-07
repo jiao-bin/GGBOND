@@ -1,0 +1,122 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='960' height='1200' viewBox='0 0 960 1200' style='background:#ffffff; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;'>
+  <!-- Header -->
+  <rect x='0' y='0' width='960' height='80' fill='#B22222'/>
+  <text x='40' y='50' fill='#FFFFFF' font-size='24' font-weight='bold'>【涌益咨询】2026年9月4日 生猪市场价格跟踪与微观汇总</text>
+  
+  <rect x='0' y='80' width='960' height='50' fill='#F8FAFC'/>
+  <text x='40' y='112' fill='#64748B' font-size='14'>样本覆盖：全国重点规模养殖集团与二育散户监测点 | 发布时间: 2026-09-04 16:30 (日度汇总表)</text>
+
+  <!-- Core Cards -->
+  <g transform='translate(40, 150)'>
+    <rect x='0' y='0' width='210' height='80' rx='8' fill='#F1F5F9' stroke='#CBD5E1'/>
+    <text x='16' y='28' fill='#64748B' font-size='13'>全国外三元均价</text>
+    <text x='16' y='54' fill='#B22222' font-size='20' font-weight='bold'>11.07 元/kg</text>
+    <text x='16' y='72' fill='#059669' font-size='12'>较昨日 +0.03 (微涨)</text>
+
+    <rect x='225' y='0' width='210' height='80' rx='8' fill='#F1F5F9' stroke='#CBD5E1'/>
+    <text x='241' y='28' fill='#64748B' font-size='13'>标肥价差 (大-标)</text>
+    <text x='241' y='54' fill='#D97706' font-size='20' font-weight='bold'>+0.35 元/kg</text>
+    <text x='241' y='72' fill='#D97706' font-size='12'>大猪温和溢价 (适度二育)</text>
+
+    <rect x='450' y='0' width='210' height='80' rx='8' fill='#F1F5F9' stroke='#CBD5E1'/>
+    <text x='466' y='28' fill='#64748B' font-size='13'>全国出栏均重</text>
+    <text x='466' y='54' fill='#2563EB' font-size='20' font-weight='bold'>124.20 kg</text>
+    <text x='466' y='72' fill='#2563EB' font-size='12'>处于合理安全区间</text>
+
+    <rect x='675' y='0' width='205' height='80' rx='8' fill='#F1F5F9' stroke='#CBD5E1'/>
+    <text x='691' y='28' fill='#64748B' font-size='13'>二次育肥出栏占比</text>
+    <text x='691' y='54' fill='#7C3AED' font-size='20' font-weight='bold'>4.10%</text>
+    <text x='691' y='72' fill='#7C3AED' font-size='12'>二育进场意愿温和理性</text>
+  </g>
+
+  <!-- Table Title -->
+  <text x='40' y='270' fill='#0F172A' font-size='16' font-weight='bold'>一、各主产主销省份生猪出栏均价与标肥溢折价明细</text>
+  
+  <!-- Table Header -->
+  <g transform='translate(40, 290)'>
+    <rect x='0' y='0' width='880' height='36' fill='#E2E8F0'/>
+    <text x='16' y='23' fill='#1E293B' font-size='13' font-weight='bold'>省份/区域</text>
+    <text x='170' y='23' fill='#1E293B' font-size='13' font-weight='bold'>外三元均价 (元/kg)</text>
+    <text x='350' y='23' fill='#1E293B' font-size='13' font-weight='bold'>较昨日涨跌</text>
+    <text x='500' y='23' fill='#1E293B' font-size='13' font-weight='bold'>标肥价差 (元/kg)</text>
+    <text x='660' y='23' fill='#1E293B' font-size='13' font-weight='bold'>二育走货与情绪</text>
+  </g>
+
+  <!-- Table Rows -->
+  <g transform='translate(40, 326)'>
+    <!-- Row 1 -->
+    <rect x='0' y='0' width='880' height='36' fill='#F8FAFC' stroke='#F1F5F9'/>
+    <text x='16' y='23' fill='#334155' font-size='13'>河南 (主产区)</text>
+    <text x='170' y='23' fill='#0F172A' font-size='13' font-weight='600'>11.12</text>
+    <text x='350' y='23' fill='#DC2626' font-size='13'>+0.05</text>
+    <text x='500' y='23' fill='#D97706' font-size='13'>+0.38</text>
+    <text x='660' y='23' fill='#475569' font-size='12'>大猪货源偏紧，二育少量补栏</text>
+
+    <!-- Row 2 -->
+    <rect x='0' y='36' width='880' height='36' fill='#FFFFFF' stroke='#F1F5F9'/>
+    <text x='16' y='59' fill='#334155' font-size='13'>山东 (主产区)</text>
+    <text x='170' y='59' fill='#0F172A' font-size='13' font-weight='600'>11.15</text>
+    <text x='350' y='59' fill='#DC2626' font-size='13'>+0.03</text>
+    <text x='500' y='59' fill='#D97706' font-size='13'>+0.40</text>
+    <text x='660' y='59' fill='#475569' font-size='12'>集团出栏顺畅，肥猪维持溢价</text>
+
+    <!-- Row 3 -->
+    <rect x='0' y='72' width='880' height='36' fill='#F8FAFC' stroke='#F1F5F9'/>
+    <text x='16' y='95' fill='#334155' font-size='13'>河北 (北方区)</text>
+    <text x='170' y='95' fill='#0F172A' font-size='13' font-weight='600'>11.05</text>
+    <text x='350' y='95' fill='#64748B' font-size='13'>0.00</text>
+    <text x='500' y='95' fill='#D97706' font-size='13'>+0.32</text>
+    <text x='660' y='95' fill='#475569' font-size='12'>屠企压价意愿强，散户挺价博弈</text>
+
+    <!-- Row 4 -->
+    <rect x='0' y='108' width='880' height='36' fill='#FFFFFF' stroke='#F1F5F9'/>
+    <text x='16' y='131' fill='#334155' font-size='13'>辽宁 (东北区)</text>
+    <text x='170' y='131' fill='#0F172A' font-size='13' font-weight='600'>10.95</text>
+    <text x='350' y='131' fill='#16A34A' font-size='13'>-0.05</text>
+    <text x='500' y='131' fill='#D97706' font-size='13'>+0.25</text>
+    <text x='660' y='131' fill='#475569' font-size='12'>二育截流有所减退，标猪微调</text>
+
+    <!-- Row 5 -->
+    <rect x='0' y='144' width='880' height='36' fill='#F8FAFC' stroke='#F1F5F9'/>
+    <text x='16' y='167' fill='#334155' font-size='13'>四川 (主销区)</text>
+    <text x='170' y='167' fill='#0F172A' font-size='13' font-weight='600'>11.35</text>
+    <text x='350' y='167' fill='#DC2626' font-size='13'>+0.08</text>
+    <text x='500' y='167' fill='#D97706' font-size='13'>+0.45</text>
+    <text x='660' y='167' fill='#475569' font-size='12'>肥猪需求走强，大猪溢价居高</text>
+
+    <!-- Row 6 -->
+    <rect x='0' y='180' width='880' height='36' fill='#FFFFFF' stroke='#F1F5F9'/>
+    <text x='16' y='203' fill='#334155' font-size='13'>广东 (主销区)</text>
+    <text x='170' y='203' fill='#0F172A' font-size='13' font-weight='600'>11.50</text>
+    <text x='350' y='203' fill='#DC2626' font-size='13'>+0.05</text>
+    <text x='500' y='203' fill='#D97706' font-size='13'>+0.42</text>
+    <text x='660' y='203' fill='#475569' font-size='12'>外省调入量受控，高价区平稳偏强</text>
+
+    <!-- Row 7 -->
+    <rect x='0' y='216' width='880' height='36' fill='#F8FAFC' stroke='#F1F5F9'/>
+    <text x='16' y='239' fill='#334155' font-size='13'>湖南 (华中区)</text>
+    <text x='170' y='239' fill='#0F172A' font-size='13' font-weight='600'>11.18</text>
+    <text x='350' y='239' fill='#DC2626' font-size='13'>+0.05</text>
+    <text x='500' y='239' fill='#D97706' font-size='13'>+0.38</text>
+    <text x='660' y='239' fill='#475569' font-size='12'>二次育肥挺价惜售，屠企被动跟涨</text>
+
+    <!-- Row 8 -->
+    <rect x='0' y='252' width='880' height='36' fill='#FFFFFF' stroke='#F1F5F9'/>
+    <text x='16' y='275' fill='#334155' font-size='13'>湖北 (华中区)</text>
+    <text x='170' y='275' fill='#0F172A' font-size='13' font-weight='600'>11.10</text>
+    <text x='350' y='275' fill='#DC2626' font-size='13'>+0.04</text>
+    <text x='500' y='275' fill='#D97706' font-size='13'>+0.36</text>
+    <text x='660' y='275' fill='#475569' font-size='12'>标猪走货平稳，屠宰开工率26.5%</text>
+  </g>
+
+  <!-- Summary Box -->
+  <g transform='translate(40, 660)'>
+    <rect x='0' y='0' width='880' height='220' rx='8' fill='#FEF3C7' stroke='#F59E0B'/>
+    <text x='20' y='32' fill='#B45309' font-size='15' font-weight='bold'>【涌益咨询·生猪市场日评与深度行情跟踪】</text>
+    <text x='20' y='64' fill='#78350F' font-size='13'>1. 现货节奏：今日全国外三元生猪均价11.07元/kg，较昨日微涨0.03元/kg。北方部分规模场挺价意愿增强。</text>
+    <text x='20' y='94' fill='#78350F' font-size='13'>2. 标肥价差：全国标肥价差维持在+0.35元/kg温和溢价，大猪需求持续稳定，二育补栏呈现理性节奏。</text>
+    <text x='20' y='124' fill='#78350F' font-size='13'>3. 出栏均重：本周全国重点样本出栏均重为124.20kg，较上期微增0.10kg，整体处于安全合理区间。</text>
+    <text x='20' y='154' fill='#78350F' font-size='13'>4. 二次育肥：样本二育出栏占比约为4.10%，补栏以适重标猪为主，短期未形成集中抢猪潮。</text>
+    <text x='20' y='184' fill='#78350F' font-size='13'>5. 屠宰开工率：重点监测屠企开工率26.50%，冻品库容率24.20%，白条终端消费稳健。</text>
+  </g>
+</svg>

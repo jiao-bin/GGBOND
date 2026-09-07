@@ -1,0 +1,7 @@
+{
+  "name": "生猪高频监控雷达",
+  "description": "0成本生猪期现升贴水、牧原股份及养殖板块异动与飞书/企微动态预警雷达",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
