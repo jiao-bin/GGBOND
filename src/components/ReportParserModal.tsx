@@ -19,6 +19,10 @@ import {
   Coins,
   RefreshCw,
 } from 'lucide-react';
+import {
+  formatPublishRelativeDate,
+  evaluateMicroIndustryTrend,
+} from '../utils/reportParser';
 
 interface CrawlerStatusData {
   isDaemonRunning: boolean;
@@ -132,6 +136,17 @@ export const ReportParserModal: React.FC<ReportParserModalProps> = ({
       setTriggering(false);
     }
   };
+
+  const modalTrend = evaluateMicroIndustryTrend({
+    standardFatDiff: snapshot?.standardFatDiff,
+    diffTrend: snapshot?.diffTrend || 'narrowing',
+    diffChange: snapshot?.diffChange ?? -0.23,
+    avgWeight: snapshot?.avgSlaughterWeight,
+    secondFatteningRate: snapshot?.secondFatteningRate,
+    rawText: snapshot?.extractedSnippet,
+  });
+
+  const modalDateInfo = formatPublishRelativeDate(snapshot?.originalPublishDate, snapshot?.originalPublishTime);
 
   if (!isOpen) return null;
 
@@ -300,9 +315,24 @@ export const ReportParserModal: React.FC<ReportParserModalProps> = ({
                 </div>
                 <div className="mt-3 pt-3 border-t border-slate-700/40 flex items-center justify-between text-xs">
                   <span className="text-slate-400">研报来源:</span>
-                  <span className="font-medium text-blue-300 truncate max-w-[220px]" title={snapshot?.lastReportSource}>
-                    {snapshot?.lastReportSource || '华泰期货·生猪市场晨评'}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-blue-300 truncate max-w-[160px]" title={snapshot?.lastReportSource}>
+                      {snapshot?.lastReportSource || '华泰期货·生猪市场晨评'}
+                    </span>
+                    {modalDateInfo.badgeType === 'today' ? (
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-medium">
+                        今日晨报
+                      </span>
+                    ) : modalDateInfo.badgeType === 'yesterday' ? (
+                      <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-medium">
+                        昨日发布 (1天前)
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-medium">
+                        {modalDateInfo.relativeText}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -325,7 +355,13 @@ export const ReportParserModal: React.FC<ReportParserModalProps> = ({
                     ? `${snapshot.standardFatDiff > 0 ? '+' : ''}${snapshot.standardFatDiff.toFixed(2)} 元/kg`
                     : '+0.35 元/kg'}
                 </div>
-                <div className="text-[11px] text-slate-500 mt-1">正值大猪溢价，刺激二育截流</div>
+                <div className="text-[11px] text-slate-400 mt-1 font-medium">
+                  {modalTrend.detectedTrend === 'narrowing'
+                    ? '大猪溢价收窄，二育转为谨慎观望'
+                    : typeof snapshot?.standardFatDiff === 'number' && snapshot.standardFatDiff >= 0.8
+                    ? '高溢价走扩，二育截流近月标猪'
+                    : '正值温和溢价，二育适度补栏'}
+                </div>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-800/30 border border-slate-700/40">
@@ -336,7 +372,7 @@ export const ReportParserModal: React.FC<ReportParserModalProps> = ({
                 <div className="text-lg font-bold font-mono text-emerald-300">
                   {snapshot?.avgSlaughterWeight ? `${snapshot.avgSlaughterWeight} kg` : '124.2 kg'}
                 </div>
-                <div className="text-[11px] text-slate-500 mt-1">反映养殖户压栏程度</div>
+                <div className="text-[11px] text-slate-500 mt-1">反映养殖户压栏出栏水位</div>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-800/30 border border-slate-700/40">
@@ -347,7 +383,9 @@ export const ReportParserModal: React.FC<ReportParserModalProps> = ({
                 <div className="text-lg font-bold font-mono text-rose-300">
                   {snapshot?.secondFatteningRate ? `${snapshot.secondFatteningRate}%` : '4.1%'}
                 </div>
-                <div className="text-[11px] text-slate-500 mt-1">二次育肥热度指标</div>
+                <div className="text-[11px] text-slate-400 mt-1">
+                  {modalTrend.secondFatteningSentiment}
+                </div>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-800/30 border border-slate-700/40">

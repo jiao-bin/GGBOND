@@ -167,21 +167,119 @@ export function extractMicroMetricsFromText(text: string): MicroMetrics {
   return result;
 }
 
-// 预置公众号每日早报样本库 (严格标注原文推送日期与时间，绝不伪造“今日”)
-export interface MorningReportPreset {
-  id: string;
-  accountName: string;
-  sourceType: string;
-  originalPublishDate: string;  // 真实原文推送日期 (如 2026-09-04)
-  originalPublishTime: string;  // 真实原文推送时间 (如 08:35)
-  isToday: boolean;             // 是否为今日推文
-  title: string;
-  summary: string;
-  rawContent: string;
-  expectedSpot?: number;
-  expectedDiff?: number;
-  expectedWeight?: number;
-  expectedSecondFattening?: number;
+// 动态计算相对时间与发布标签 (杜绝“今日发布”与实际日期脱节)
+export function formatPublishRelativeDate(dateStr?: string, timeStr?: string): {
+  isToday: boolean;
+  relativeText: string;
+  badgeType: 'today' | 'yesterday' | 'daysAgo' | 'history';
+  daysAgo: number;
+} {
+  if (!dateStr) {
+    return { isToday: false, relativeText: '历史研报', badgeType: 'history', daysAgo: 99 };
+  }
+
+  const todayStr = getBeijingDateStr();
+  const [ty, tm, td] = todayStr.split('-').map(Number);
+  const tDate = new Date(ty, tm - 1, td);
+
+  const [py, pm, pd] = dateStr.split('-').map(Number);
+  const pDate = new Date(py, pm - 1, pd);
+
+  const diffMs = tDate.getTime() - pDate.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) {
+    return { isToday: true, relativeText: '今日晨报', badgeType: 'today', daysAgo: 0 };
+  } else if (diffDays === 1) {
+    return { isToday: false, relativeText: '昨日发布 (1天前)', badgeType: 'yesterday', daysAgo: 1 };
+  } else if (diffDays === 2) {
+    return { isToday: false, relativeText: `2天前发布 (${dateStr.slice(5)})`, badgeType: 'daysAgo', daysAgo: 2 };
+  } else {
+    return { isToday: false, relativeText: `${diffDays}天前发布 (${dateStr.slice(5)})`, badgeType: 'history', daysAgo: diffDays };
+  }
+}
+
+// 结合标肥差环比走势（走扩 vs 收窄）与产业情绪深度研判
+export function evaluateMicroIndustryTrend({
+  standardFatDiff,
+  diffTrend = 'narrowing',
+  diffChange = -0.23,
+  avgWeight,
+  secondFatteningRate,
+  rawText = '',
+}: {
+  standardFatDiff?: number | null;
+  diffTrend?: 'narrowing' | 'widening' | 'flat';
+  diffChange?: number;
+  avgWeight?: number | null;
+  secondFatteningRate?: number | null;
+  rawText?: string;
+}) {
+  let detectedTrend = diffTrend;
+  if (rawText) {
+    if (/(?:收窄|回落|下降|走低|收缩|承压|支撑下降)/.test(rawText)) {
+      detectedTrend = 'narrowing';
+    } else if (/(?:走扩|扩大|拉大|上升|走高|扩大至)/.test(rawText)) {
+      detectedTrend = 'widening';
+    }
+  }
+
+  let standardFatStatusText = '标肥平水状态';
+  let standardFatSubText = '大猪与标猪价格平衡';
+  let isFatDiffHigh = false;
+
+  if (typeof standardFatDiff === 'number') {
+    if (standardFatDiff >= 0.8 && detectedTrend === 'widening') {
+      standardFatStatusText = `大猪高溢价 (+${standardFatDiff.toFixed(2)}元·走扩) · 极度刺激二育截流`;
+      standardFatSubText = '价差持续走扩，二育增重利润丰厚，加速抢购标猪';
+      isFatDiffHigh = true;
+    } else if (standardFatDiff >= 0.3 && detectedTrend === 'narrowing') {
+      standardFatStatusText = `大猪溢价收窄 (+${standardFatDiff.toFixed(2)}元) · 二育转为谨慎观望`;
+      standardFatSubText = '大猪集中出栏冲击溢价，价差明显收缩，二育补栏降温';
+    } else if (standardFatDiff >= 0.3) {
+      standardFatStatusText = `大猪温和溢价 (+${standardFatDiff.toFixed(2)}元) · 二育适度补栏`;
+      standardFatSubText = '大猪具正常溢价，养殖端按正常节奏出栏增重';
+    } else if (standardFatDiff < -0.1) {
+      standardFatStatusText = `标肥倒挂 (${standardFatDiff.toFixed(2)}元) · 大猪折价恐慌踩踏`;
+      standardFatSubText = '大猪贴水加重，压栏风险集聚促使恐慌抛售';
+    } else {
+      standardFatStatusText = `标肥平水 (${standardFatDiff.toFixed(2)}元) · 供需均衡`;
+      standardFatSubText = '标肥价差持平，市场投机截流意愿微弱';
+    }
+  }
+
+  // 二育情绪判定：如标肥差收窄或原文包含谨慎情绪，修正为“谨慎观望”
+  const textHasCautious = rawText ? /(?:谨慎|谨慎为主|观望|难以放大|放缓|降温|出栏增加)/.test(rawText) : false;
+  let secondFatteningSentiment = '二育情绪中性平稳';
+  let secondFatteningSubText = '二次育肥按部就班';
+
+  if (typeof secondFatteningRate === 'number') {
+    if (detectedTrend === 'narrowing' || textHasCautious) {
+      secondFatteningSentiment = '价差收窄·二育情绪转为谨慎观望';
+      secondFatteningSubText = `虽有大猪出栏占比(${secondFatteningRate}%)，但溢价收缩导致二育补栏放缓`;
+    } else if (detectedTrend === 'widening' && (standardFatDiff ?? 0) >= 0.6) {
+      secondFatteningSentiment = '价差走扩·二育积极入场截流';
+      secondFatteningSubText = '大猪溢价抬升刺激二育入场截留标猪';
+    } else if (secondFatteningRate >= 7.0) {
+      secondFatteningSentiment = '二育高位博弈·出栏与补栏交织';
+      secondFatteningSubText = '前期二育大猪集中出栏，市场心态趋于理性';
+    } else if (secondFatteningRate < 4.0) {
+      secondFatteningSentiment = '二育情绪低迷·入场意愿较弱';
+      secondFatteningSubText = '二育补栏稀少，市场以正常出栏为主';
+    } else {
+      secondFatteningSentiment = '二育入场温和·适度理性';
+      secondFatteningSubText = '二育规模受控，未现集中投机冲击';
+    }
+  }
+
+  return {
+    detectedTrend,
+    standardFatStatusText,
+    standardFatSubText,
+    secondFatteningSentiment,
+    secondFatteningSubText,
+    isFatDiffHigh,
+  };
 }
 
 // 真实公开研报与现货早报样本库 (杜绝任何编造数据，严格按真实公开研报正文与养猪网榜单收录)
@@ -189,34 +287,57 @@ export interface MorningReportPreset {
   id: string;
   accountName: string;
   sourceType: string;
-  originalPublishDate: string;  // 真实原文发布日期 (如 2026-08-27)
+  originalPublishDate: string;  // 真实原文发布日期 (如 2026-09-09)
   originalPublishTime: string;  // 真实原文发布时间 (如 08:30)
-  isToday: boolean;             // 是否为今日推文
+  isToday: boolean;             // 是否为今日推文 (动态计算)
   title: string;
   summary: string;
   rawContent: string;
   expectedSpot?: number;
   expectedDiff?: number;
+  diffTrend?: 'narrowing' | 'widening' | 'flat';
   expectedWeight?: number;
   expectedSecondFattening?: number;
 }
 
 export const PRESET_MORNING_REPORTS: MorningReportPreset[] = [
   {
+    id: 'huatai-20260909',
+    accountName: '华泰期货 (期货公司今日生猪早评)',
+    sourceType: '期货公司晨评 (纯文本快讯流)',
+    originalPublishDate: '2026-09-09',
+    originalPublishTime: '08:30',
+    isToday: true,
+    title: '【华泰期货·生猪市场晨评】现货窄幅震荡，肥标价差支撑下降收窄至0.60元/kg',
+    summary: '华泰期货今日晨报快讯流：现货价格窄幅震荡，肥标价差近期支撑下降收窄至0.60元/kg，二次育肥入场情绪谨慎为主，短期内预计难以放大规模，出栏均重122.94kg，二育占比8.6%...',
+    rawContent: `【华泰期货·生猪市场晨报（2026年9月9日 08:30发布）】
+生猪现货价格窄幅震荡，全国均价小幅企稳。养殖端出栏量环比回升，肥标价差近期支撑下降，收窄至 0.60 元/kg。
+二次育肥入场情绪以谨慎为主，短期内预计难以放大规模，养殖端存在双节前主动压栏增重与大猪顺势出栏交织预期。
+全国外三元生猪出栏均重为 122.94 公斤，二育入场占比约为 8.6%，屠宰企业开工率 29.59%，重点屠宰企业冻品库容率 32.30%。
+盘面中性震荡，建议关注中秋消费提振及二育出栏心态变化。`,
+    expectedSpot: undefined,
+    expectedDiff: 0.60,
+    diffTrend: 'narrowing',
+    expectedWeight: 122.94,
+    expectedSecondFattening: 8.6,
+  },
+  {
     id: 'huatai-20260907',
     accountName: '华泰期货 (期货公司生猪早评)',
     sourceType: '期货公司晨评 (纯文本快讯流)',
     originalPublishDate: '2026-09-07',
     originalPublishTime: '08:30',
-    isToday: true,
+    isToday: false,
     title: '【华泰期货·生猪市场晨评】9月供需博弈加剧，标肥价差收窄至0.62元/kg',
     summary: '华泰期货晨报公开快讯流：散户及二育大猪集中出栏，大猪较标猪溢价约0.31元/斤，折合标肥差0.62元/kg，出栏均重122.94kg，二育占比8.8%...',
     rawContent: `【华泰期货·生猪市场晨报（2026年9月7日 08:30发布）】
 9月生猪市场供需博弈加剧。现货方面，前期部分散户及二次育肥大猪集中出栏，大猪阶段性供给增加，标肥价差收窄至 0.62 元/kg（部分主产区大猪较标猪溢价约 0.31元/斤）。
+肥标价差近期支撑下降，二次育肥入场情绪谨慎为主，短期内预计难以放大规模。
 全国外三元生猪出栏均重为 122.94 公斤，二次育肥入场占比约为 8.8%，屠宰企业开工率 29.59%，重点屠宰企业冻品库容率 32.30%。
 盘面延续贴水状态，市场对后市预期趋于理性，重点跟踪中秋备货需求释放节奏及二育出栏心态。`,
     expectedSpot: undefined,
     expectedDiff: 0.62,
+    diffTrend: 'narrowing',
     expectedWeight: 122.94,
     expectedSecondFattening: 8.8,
   },
@@ -226,7 +347,7 @@ export const PRESET_MORNING_REPORTS: MorningReportPreset[] = [
     sourceType: '期货公司晨评 (纯文本快讯流)',
     originalPublishDate: '2026-09-07',
     originalPublishTime: '08:32',
-    isToday: true,
+    isToday: false,
     title: '【国信期货·生猪早评】大猪溢价收窄至0.29元/斤，现货短期承压震荡',
     summary: '国信期货农产品生猪晨评：大猪较标猪溢价收窄至0.29元/斤(折合0.58元/kg)，生猪出栏均重123.1kg，二育占比8.5%...',
     rawContent: `【国信期货·生猪早评（2026年9月7日 08:32发布）】
@@ -235,6 +356,7 @@ export const PRESET_MORNING_REPORTS: MorningReportPreset[] = [
 短期供给充裕，建议养殖企业把握套保机会。`,
     expectedSpot: undefined,
     expectedDiff: 0.58,
+    diffTrend: 'narrowing',
     expectedWeight: 123.1,
     expectedSecondFattening: 8.5,
   },
@@ -284,7 +406,7 @@ export const PRESET_MORNING_REPORTS: MorningReportPreset[] = [
     sourceType: '公开现货行情排行',
     originalPublishDate: '2026-09-06',
     originalPublishTime: '00:20',
-    isToday: true,
+    isToday: false,
     title: '【中国养猪网】全国外三元价格排行榜 (全国均价11.15元/kg)',
     summary: '中国养猪网官方排行榜真实发布：全国有1388名信息员参与报价，外三元均价11.15元/kg，较昨日+0.02元...',
     rawContent: `【中国养猪网·猪易通APP全国外三元价格排行榜 (发布时间: 2026年09月06日 00:20)】

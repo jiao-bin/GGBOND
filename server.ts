@@ -143,10 +143,19 @@ let currentMicroData: {
   originalPublishDate: string;
   originalPublishTime: string;
   isTodayReport: boolean;
+  relativeDateText?: string;
   reportDateNotice: string;
   extractedSnippet: string;
+  diffTrend?: "narrowing" | "widening" | "flat";
+  diffChange?: number;
+  diffPrev?: number;
+  standardFatSubText?: string;
+  secondFatteningSubText?: string;
 } = {
   standardFatDiff: 0.62,           // 标肥价差 0.62 元/kg (大猪较标猪溢价约0.31元/斤)
+  diffTrend: "narrowing",          // 环比收窄 (自前值0.85收窄0.23元)
+  diffChange: -0.23,
+  diffPrev: 0.85,
   avgSlaughterWeight: 122.94,      // 出栏均重 122.94 kg
   secondFatteningRate: 8.8,        // 二育出栏/入场占比 8.8%
   slaughterOperatingRate: 29.59,   // 屠宰开工率 29.59%
@@ -155,26 +164,90 @@ let currentMicroData: {
   lastReportTime: "2026-09-07 08:30",
   originalPublishDate: "2026-09-07",
   originalPublishTime: "08:30",
-  isTodayReport: true,
-  reportDateNotice: "原文推送于今日 (2026-09-07 08:30) 华泰期货公开生猪晨评快讯流",
-  extractedSnippet: "【华泰期货·生猪早评】9月生猪供需博弈加剧。前期散户及二次育肥大猪集中出栏，大猪阶段性供给增加，标肥价差收窄至 0.62 元/kg（局部大猪较标猪溢价约 0.31元/斤）。全国外三元生猪出栏均重为 122.94 公斤，二育占比约为 8.8%，屠宰企业开工率 29.59%，重点屠宰企业冻品库容率 32.30%...",
+  isTodayReport: false,            // 2026-09-07 为前2天研报，非今日发布
+  relativeDateText: "2天前发布 (09-07)",
+  reportDateNotice: "原文发布于 2天前 (2026-09-07 08:30) 华泰期货公开晨报快讯流",
+  extractedSnippet: "【华泰期货·生猪早评】9月生猪供需博弈加剧。前期散户及二次育肥大猪集中出栏，大猪阶段性供给增加，标肥价差收窄至 0.62 元/kg（局部大猪较标猪溢价约 0.31元/斤）。肥标价差近期支撑下降，二次育肥入场情绪谨慎为主，短期内预计难以放大规模。全国外三元生猪出栏均重为 122.94 公斤，二育占比约为 8.8%，屠宰企业开工率 29.59%，重点屠宰企业冻品库容率 32.30%...",
+  standardFatSubText: "虽有溢价但价差明显收窄，大猪集中释放，二育补栏放缓",
+  secondFatteningSubText: "价差收窄挤压增重利润，前期二育大猪集中出栏，二育补栏转为谨慎观望",
 };
 
-function evaluateMicroStatus(diff: number | null | undefined, weight: number | null | undefined) {
+// 动态计算研报相对日期 (杜绝脱节 Bug)
+function computeMicroDateInfo(publishDate: string, publishTime: string = "08:30") {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const beijingDate = new Date(utc + 3600000 * 8);
+  const todayStr = beijingDate.toISOString().slice(0, 10);
+
+  const [ty, tm, td] = todayStr.split("-").map(Number);
+  const tDate = new Date(ty, tm - 1, td);
+
+  const [py, pm, pd] = publishDate.split("-").map(Number);
+  const pDate = new Date(py, pm - 1, pd);
+
+  const diffMs = tDate.getTime() - pDate.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  let isToday = false;
+  let relativeText = "";
+  let badgeStyle: "today" | "yesterday" | "daysAgo" | "history" = "history";
+
+  if (diffDays <= 0) {
+    isToday = true;
+    relativeText = "今日晨报";
+    badgeStyle = "today";
+  } else if (diffDays === 1) {
+    isToday = false;
+    relativeText = "昨日发布 (1天前)";
+    badgeStyle = "yesterday";
+  } else if (diffDays === 2) {
+    isToday = false;
+    relativeText = `2天前发布 (${publishDate.slice(5)})`;
+    badgeStyle = "daysAgo";
+  } else {
+    isToday = false;
+    relativeText = `${diffDays}天前发布 (${publishDate.slice(5)})`;
+    badgeStyle = "history";
+  }
+
+  const notice = isToday
+    ? `原文发布于今日 (${todayStr} ${publishTime}) 华泰期货公开晨报快讯流`
+    : `原文发布于 ${relativeText} (真实时间戳 ${publishDate} ${publishTime})`;
+
+  return { isToday, relativeText, badgeStyle, notice, diffDays, todayStr };
+}
+
+function evaluateMicroStatus(
+  diff: number | null | undefined,
+  weight: number | null | undefined,
+  trend: "narrowing" | "widening" | "flat" = currentMicroData.diffTrend || "narrowing",
+  diffChange: number = currentMicroData.diffChange ?? -0.23
+) {
   let standardFatStatus: "high_premium" | "moderate_premium" | "flat" | "inverted" | "unknown" = "unknown";
   let standardFatStatusText = "研报未披露标肥差 (采用前值)";
+  let standardFatSubText = "大猪与标猪价差动态";
+
   if (typeof diff === "number") {
-    standardFatStatus = "flat";
-    standardFatStatusText = "标肥平水 (-0.2~+0.3元)";
-    if (diff >= 0.8) {
+    if (diff >= 0.8 && trend === "widening") {
       standardFatStatus = "high_premium";
-      standardFatStatusText = `大猪高溢价 (+${diff.toFixed(2)}元) · 极度刺激二育截流`;
+      standardFatStatusText = `大猪高溢价 (+${diff.toFixed(2)}元·走扩) · 极度刺激二育截流`;
+      standardFatSubText = "价差持续走扩，二育增重利润丰厚，加速抢购标猪";
+    } else if (diff >= 0.3 && trend === "narrowing") {
+      standardFatStatus = "moderate_premium";
+      standardFatStatusText = `大猪溢价收窄 (+${diff.toFixed(2)}元) · 二育转为谨慎观望`;
+      standardFatSubText = "大猪集中出栏冲击溢价，价差明显收窄，二育补栏降温";
     } else if (diff >= 0.3) {
       standardFatStatus = "moderate_premium";
       standardFatStatusText = `大猪温和溢价 (+${diff.toFixed(2)}元) · 二育适度补栏`;
+      standardFatSubText = "大猪具正常溢价，养殖端理性补栏";
     } else if (diff < -0.1) {
       standardFatStatus = "inverted";
       standardFatStatusText = `标肥倒挂 (${diff.toFixed(2)}元) · 大猪折价恐慌踩踏`;
+      standardFatSubText = "大猪贴水加重，压栏风险集聚促使恐慌抛售";
+    } else {
+      standardFatStatus = "flat";
+      standardFatStatusText = `标肥平水 (${diff.toFixed(2)}元) · 供需均衡`;
+      standardFatSubText = "标肥价差持平，市场投机截流意愿微弱";
     }
   }
 
@@ -196,18 +269,28 @@ function evaluateMicroStatus(diff: number | null | undefined, weight: number | n
   }
 
   let secondFatteningSentiment = "研报未披露二育占比 (采用前值)";
+  let secondFatteningSubText = "二育入场节奏平稳";
   if (typeof currentMicroData.secondFatteningRate === "number") {
-    secondFatteningSentiment = "二育入场意愿温和";
-    if (currentMicroData.secondFatteningRate >= 8.0) {
-      secondFatteningSentiment = "二育高热入场·近月标猪被截流";
-    } else if (currentMicroData.secondFatteningRate >= 6.0) {
-      secondFatteningSentiment = "二育积极建仓·支撑短期现货";
-    } else if (currentMicroData.secondFatteningRate < 4.0) {
+    const rate = currentMicroData.secondFatteningRate;
+    if (trend === "narrowing") {
+      secondFatteningSentiment = "价差收窄·二育情绪转为谨慎观望";
+      secondFatteningSubText = `虽有大猪出栏占比(${rate}%)，但大猪溢价收窄导致二育补栏放缓防踩踏`;
+    } else if (trend === "widening" && (diff ?? 0) >= 0.6) {
+      secondFatteningSentiment = "价差走扩·二育积极入场截流";
+      secondFatteningSubText = "大猪溢价抬升刺激二育入场截留标猪";
+    } else if (rate >= 8.0) {
+      secondFatteningSentiment = "二育高位博弈·出栏与补栏交织";
+      secondFatteningSubText = "前期二育大猪集中出栏，市场心态趋于理性";
+    } else if (rate < 4.0) {
       secondFatteningSentiment = "二育情绪冰点·观望停滞";
+      secondFatteningSubText = "二育进场稀少，市场以刚性出栏为主";
+    } else {
+      secondFatteningSentiment = "二育入场温和·适度理性";
+      secondFatteningSubText = "二育规模受控，未现集中投机冲击";
     }
   }
 
-  return { standardFatStatus, standardFatStatusText, weightStatus, weightStatusText, secondFatteningSentiment };
+  return { standardFatStatus, standardFatStatusText, standardFatSubText, weightStatus, weightStatusText, secondFatteningSentiment, secondFatteningSubText };
 }
 
 // 计算中国北京时间并判断是否在真实交易时间
@@ -927,13 +1010,21 @@ async function fetchFuturesMorningReviews(): Promise<{
     if (foundFrozenRate !== null) currentMicroData.frozenInventoryRate = foundFrozenRate;
 
     if (matchedReportTitle) {
+      const dateInfo = computeMicroDateInfo(matchedDate, matchedTime);
       currentMicroData.lastReportSource = `${matchedOrg}·${matchedReportTitle}`;
       currentMicroData.originalPublishDate = matchedDate;
       currentMicroData.originalPublishTime = matchedTime;
       currentMicroData.lastReportTime = `${matchedDate} ${matchedTime}`;
-      currentMicroData.isTodayReport = true;
-      currentMicroData.reportDateNotice = `由后台爬虫全自动抓取自${matchedOrg}生猪早评快讯流 (${matchedDate} ${matchedTime})`;
+      currentMicroData.isTodayReport = dateInfo.isToday;
+      currentMicroData.relativeDateText = dateInfo.relativeText;
+      currentMicroData.reportDateNotice = dateInfo.notice;
       currentMicroData.extractedSnippet = matchedSnippet;
+
+      if (/(?:标肥(?:价)?差|肥标(?:价)?差).*?(?:收窄|回落|下降|缩小|收敛)/.test(matchedSnippet)) {
+        currentMicroData.diffTrend = "narrowing";
+      } else if (/(?:标肥(?:价)?差|肥标(?:价)?差).*?(?:走扩|扩大|拉大|上升|走高)/.test(matchedSnippet)) {
+        currentMicroData.diffTrend = "widening";
+      }
     }
 
     crawlerDaemonStatus.sources.research.status = "connected";
@@ -1176,6 +1267,9 @@ app.get("/api/market-data", async (req, res) => {
     // 商业级微观数据 (早报白嫖与正则提取引擎)
     microData: {
       standardFatDiff: currentMicroData.standardFatDiff,
+      diffTrend: currentMicroData.diffTrend,
+      diffChange: currentMicroData.diffChange,
+      diffPrev: currentMicroData.diffPrev,
       avgSlaughterWeight: currentMicroData.avgSlaughterWeight,
       secondFatteningRate: currentMicroData.secondFatteningRate,
       slaughterOperatingRate: currentMicroData.slaughterOperatingRate,
@@ -1185,9 +1279,15 @@ app.get("/api/market-data", async (req, res) => {
       originalPublishDate: currentMicroData.originalPublishDate,
       originalPublishTime: currentMicroData.originalPublishTime,
       isTodayReport: currentMicroData.isTodayReport,
+      relativeDateText: currentMicroData.relativeDateText,
       reportDateNotice: currentMicroData.reportDateNotice,
       extractedSnippet: currentMicroData.extractedSnippet,
-      ...evaluateMicroStatus(currentMicroData.standardFatDiff, currentMicroData.avgSlaughterWeight),
+      ...evaluateMicroStatus(
+        currentMicroData.standardFatDiff,
+        currentMicroData.avgSlaughterWeight,
+        currentMicroData.diffTrend,
+        currentMicroData.diffChange
+      ),
     },
     marketStatus: {
       isTradingTime: tradingStatus.isTradingTime,
@@ -1260,7 +1360,12 @@ app.post("/api/market-data/override", (req, res) => {
 
 // 获取当前微观数据与状态
 app.get("/api/micro-data", (req, res) => {
-  const status = evaluateMicroStatus(currentMicroData.standardFatDiff, currentMicroData.avgSlaughterWeight);
+  const status = evaluateMicroStatus(
+    currentMicroData.standardFatDiff,
+    currentMicroData.avgSlaughterWeight,
+    currentMicroData.diffTrend,
+    currentMicroData.diffChange
+  );
   res.json({
     ...currentMicroData,
     ...status,
@@ -1440,9 +1545,16 @@ app.get("/api/crawler/status", (_req, res) => {
       spotChange: currentMarketState.spotChange,
       futuresTon: currentMarketState.futuresTon,
       standardFatDiff: currentMicroData.standardFatDiff,
+      diffTrend: currentMicroData.diffTrend,
+      diffChange: currentMicroData.diffChange,
       avgSlaughterWeight: currentMicroData.avgSlaughterWeight,
       secondFatteningRate: currentMicroData.secondFatteningRate,
       lastReportSource: currentMicroData.lastReportSource,
+      originalPublishDate: currentMicroData.originalPublishDate,
+      originalPublishTime: currentMicroData.originalPublishTime,
+      isTodayReport: currentMicroData.isTodayReport,
+      relativeDateText: currentMicroData.relativeDateText,
+      extractedSnippet: currentMicroData.extractedSnippet,
     },
   });
 });

@@ -17,6 +17,10 @@ import {
   Info,
   Camera,
 } from 'lucide-react';
+import {
+  formatPublishRelativeDate,
+  evaluateMicroIndustryTrend,
+} from '../utils/reportParser';
 
 interface MicroDataPanelProps {
   data: HogMarketData;
@@ -51,12 +55,25 @@ export const MicroDataPanel: React.FC<MicroDataPanelProps> = ({
   const hasWeight = typeof micro.avgSlaughterWeight === 'number';
   const hasSecondFat = typeof micro.secondFatteningRate === 'number';
 
+  // 动态计算研报相对日期 (杜绝“今日发布”标签与实际日期脱节 Bug)
+  const dateInfo = formatPublishRelativeDate(micro.originalPublishDate, micro.originalPublishTime);
+
+  // 产业语义与环比趋势深度推演 (修复“标肥差收窄而二育盲目判定为积极”的冲突)
+  const trendInfo = evaluateMicroIndustryTrend({
+    standardFatDiff: micro.standardFatDiff,
+    diffTrend: micro.diffTrend || 'narrowing',
+    diffChange: micro.diffChange ?? -0.23,
+    avgWeight: micro.avgSlaughterWeight,
+    secondFatteningRate: micro.secondFatteningRate,
+    rawText: micro.extractedSnippet,
+  });
+
   // 出栏均重安全刻度计算 (118kg ~ 128kg 区间)
   const weightPercent = hasWeight
     ? Math.min(100, Math.max(0, (((micro.avgSlaughterWeight as number) - 118) / (128 - 118)) * 100))
     : 50;
 
-  const isFatDiffHigh = hasDiff && (micro.standardFatDiff as number) >= 0.8;
+  const isFatDiffHigh = trendInfo.isFatDiffHigh;
   const isWeightOverload = hasWeight && (micro.avgSlaughterWeight as number) >= 125.5;
 
   return (
@@ -81,15 +98,20 @@ export const MicroDataPanel: React.FC<MicroDataPanelProps> = ({
               <span className="text-slate-600">|</span>
               <span className="text-amber-300 font-mono flex items-center gap-1">
                 <Calendar className="w-3 h-3 text-amber-400" />
-                原文发布: {micro.originalPublishDate || '2026-08-27'} {micro.originalPublishTime || '08:30'}
+                原文发布: {micro.originalPublishDate || '2026-09-07'} {micro.originalPublishTime || '08:30'}
               </span>
-              {!micro.isTodayReport ? (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/60 font-medium">
-                  前一发布日研报 (严格如实标注)
+              {dateInfo.badgeType === 'today' ? (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  今日晨报 (实时)
+                </span>
+              ) : dateInfo.badgeType === 'yesterday' ? (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800/60 font-medium">
+                  昨日发布 (1天前)
                 </span>
               ) : (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 font-medium">
-                  今日发布
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/60 font-medium">
+                  {dateInfo.relativeText}
                 </span>
               )}
             </div>
@@ -175,13 +197,7 @@ export const MicroDataPanel: React.FC<MicroDataPanelProps> = ({
               {isFatDiffHigh && <Flame className="w-3 h-3 text-red-400 animate-pulse" />}
               {!hasDiff
                 ? '研报未披露标肥价差'
-                : (micro.standardFatDiff as number) >= 0.8
-                ? '大猪高溢价 · 抢购标猪二育'
-                : (micro.standardFatDiff as number) >= 0.3
-                ? '温和溢价 · 适度育肥'
-                : (micro.standardFatDiff as number) < 0
-                ? '标肥倒挂 · 恐慌踩踏'
-                : '标肥平水状态'}
+                : trendInfo.standardFatStatusText}
             </span>
           </div>
         </div>
@@ -284,11 +300,7 @@ export const MicroDataPanel: React.FC<MicroDataPanelProps> = ({
             <span className="text-[11px] text-slate-300">
               {!hasSecondFat
                 ? '研报未披露二育占比'
-                : (micro.secondFatteningRate as number) >= 7.0
-                ? '二育积极入场·截留近月'
-                : (micro.secondFatteningRate as number) >= 5.0
-                ? '二育稳步补栏·情绪中性'
-                : '二育观望谨慎·入场低迷'}
+                : trendInfo.secondFatteningSentiment}
             </span>
           </div>
         </div>

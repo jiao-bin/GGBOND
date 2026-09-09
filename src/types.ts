@@ -95,21 +95,27 @@ export interface HogMarketData {
   // 商业级微观数据 (真实公开研报/行情源抽取，支持严格缺失降级)
   microData?: {
     standardFatDiff?: number | null;     // 标肥价差 (元/kg, 肥猪减标猪价差，缺失时为null)
+    diffTrend?: 'narrowing' | 'widening' | 'flat'; // 标肥差环比趋势 (收窄/走扩/持平)
+    diffChange?: number;                 // 标肥差环比变动 (如 -0.23元/kg)
+    diffPrev?: number;                   // 前期峰值/对比值
     standardFatStatus: 'high_premium' | 'moderate_premium' | 'flat' | 'inverted' | 'unknown';
-    standardFatStatusText: string;     // 例如 "大猪溢价超0.8元·刺激二育抢标猪"
+    standardFatStatusText: string;     // 例如 "大猪溢价收窄·二育转为谨慎观望"
+    standardFatSubText?: string;       // 产业辅助说明
     avgSlaughterWeight?: number | null;  // 出栏均重 (kg, 样本大猪库存水位，缺失时为null)
     weightStatus: 'safe' | 'normal' | 'warning' | 'critical' | 'unknown';
     weightStatusText: string;          // 例如 "均重125.4kg·接近压栏踩踏预警线"
     secondFatteningRate?: number | null;// 二育出栏或入场占比 %，缺失时为null
-    secondFatteningSentiment: string;  // 例如 "二育截流现货情绪升温"
+    secondFatteningSentiment: string;  // 例如 "价差收窄·二育情绪转为谨慎观望"
+    secondFatteningSubText?: string;   // 二育产业辅助说明
     slaughterOperatingRate?: number | null; // 屠宰开工率 %
     frozenInventoryRate?: number | null;    // 冻品库容率 %
-    lastReportSource: string;          // 例如 "申港证券行业研报"
-    lastReportTime: string;            // 例如 "2026-08-27 08:30"
-    originalPublishDate?: string;      // 原文真实推送日期，例如 "2026-08-27" (不强行修改)
+    lastReportSource: string;          // 例如 "华泰期货·生猪市场晨评"
+    lastReportTime: string;            // 例如 "2026-09-07 08:30"
+    originalPublishDate?: string;      // 原文真实推送日期，例如 "2026-09-07"
     originalPublishTime?: string;      // 原文真实推送时间，例如 "08:30"
-    isTodayReport?: boolean;           // 是否为今日早报推文
-    reportDateNotice?: string;         // 例如 "原文推送于 2026-08-27 (前一发布日推文)"
+    isTodayReport?: boolean;           // 是否为今日早报推文 (根据真实系统时间动态核算)
+    relativeDateText?: string;         // 相对时间描述，例如 "2天前发布 (09-07)"
+    reportDateNotice?: string;         // 例如 "原文推送于 2天前 (2026-09-07 08:30)"
     extractedSnippet: string;          // 命中的关键研报原文
   };
   // 交易所真实交易状态
