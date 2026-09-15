@@ -300,7 +300,7 @@ export const ReportParserModal: React.FC<ReportParserModalProps> = ({
                 <div className="mt-3 pt-3 border-t border-slate-700/40 flex items-center justify-between text-xs">
                   <span className="text-slate-400">当前入库外三元:</span>
                   <span className="font-mono font-bold text-amber-300">
-                    {snapshot?.spotKg ? `${snapshot.spotKg} 元/kg` : '10.92 元/kg'}
+                    {snapshot?.spotKg ? `${snapshot.spotKg} 元/kg` : '动态同步中...'}
                   </span>
                 </div>
               </div>
@@ -465,7 +465,7 @@ export const ReportParserModal: React.FC<ReportParserModalProps> = ({
                   <span>全国外三元均价</span>
                 </div>
                 <div className="text-lg font-bold font-mono text-amber-300">
-                  {snapshot?.spotKg ? `${snapshot.spotKg} 元/kg` : '10.92 元/kg'}
+                  {snapshot?.spotKg ? `${snapshot.spotKg} 元/kg` : '动态同步中...'}
                 </div>
                 <div className="text-[11px] text-slate-500 mt-1">中国养猪网实时同步</div>
               </div>

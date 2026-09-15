@@ -136,9 +136,9 @@ export const MarathonHeader: React.FC<MarathonHeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* 标志区：生猪高频监控雷达 */}
         <div className="flex items-center gap-3">
-          {/* 电光蓝+电光绿品牌徽标 */}
-          <div className="relative w-10 h-10 rounded bg-[#2000E0] border border-[#3B14FF] text-[#D4FF00] flex items-center justify-center font-bold text-lg shrink-0 select-none shadow-sm">
-            <Radio className="w-5 h-5 text-[#D4FF00] animate-pulse" />
+          {/* 绿底蓝标 (绿色背景 + 蓝色图标) */}
+          <div className="relative w-10 h-10 rounded-lg bg-[#D4FF00] border border-[#E5FF66] text-[#2000E0] flex items-center justify-center font-bold text-lg shrink-0 select-none shadow-md shadow-[#D4FF00]/25">
+            <Radio className="w-5 h-5 text-[#2000E0] animate-pulse stroke-[2.5]" />
           </div>
 
           <div>
@@ -146,7 +146,7 @@ export const MarathonHeader: React.FC<MarathonHeaderProps> = ({
               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
                 <span>生猪高频监控雷达</span>
               </h1>
-              <span className="hidden sm:inline-block px-2 py-0.5 rounded bg-[#2000E0]/20 text-[#2000E0] text-[11px] font-mono border border-[#2000E0]/40 font-bold">
+              <span className="hidden sm:inline-block px-2 py-0.5 rounded bg-emerald-400/20 text-emerald-300 text-[11px] font-mono border border-emerald-400/40 font-bold">
                 LIVE RADAR
               </span>
             </div>

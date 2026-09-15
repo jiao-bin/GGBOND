@@ -72,8 +72,8 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           {/* Logo 与 核心状态 */}
           <div className="flex items-center space-x-3">
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-lg shadow-emerald-500/20">
-              <Activity className="w-6 h-6 animate-pulse" />
+            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-400 border border-emerald-300 text-[#2000E0] shadow-lg shadow-emerald-500/25">
+              <Activity className="w-6 h-6 text-[#2000E0] animate-pulse stroke-[2.5]" />
               {activeAlertsCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-4 w-4">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
@@ -88,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center space-x-2">
                 <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
                   生猪高频监控雷达
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                     0成本·期现异动
                   </span>
                 </h1>

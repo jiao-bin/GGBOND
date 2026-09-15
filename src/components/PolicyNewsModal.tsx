@@ -80,60 +80,61 @@ export const PolicyNewsModal: React.FC<PolicyNewsModalProps> = ({
       id="policy-news-modal-overlay"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
     >
-      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden text-slate-100">
+      <div className="relative w-full max-w-4xl max-h-[95vh] sm:max-h-[92vh] flex flex-col bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden text-slate-100">
         {/* 顶部标题栏 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/95 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
-              <Radio className="w-5 h-5 animate-pulse" />
+        <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-900/95 sticky top-0 z-10">
+          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1 pr-2">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 shrink-0 mt-0.5 sm:mt-0">
+              <Radio className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white tracking-wide">
-                  华储网官方公告 & 7x24 政策快讯中心
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <h2 className="text-sm sm:text-lg font-bold text-white tracking-wide truncate">
+                  华储网官方公告 & 政策快讯中心
                 </h2>
-                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                <span className="px-1.5 py-0.5 text-[10px] sm:text-xs font-semibold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
-                  储备肉动态 7x24 监听
+                  7x24 监听
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                接入 华储网 (www.cmerchant.com) 官方公告与新浪/金十【华储网 / 储备肉 / 收储 / 抛储 / 发改委预警】快讯流
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 line-clamp-1 sm:line-clamp-none">
+                接入 华储网 (www.cmerchant.com) 官方公告与新浪/金十【华储网 / 储备肉 / 发改委预警】快讯流
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               id="policy-modal-refresh-btn"
               onClick={handleManualRefresh}
               disabled={isRefreshing}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:opacity-50 text-xs font-semibold text-white flex items-center gap-1.5 transition-all shadow-sm shadow-emerald-900/40"
+              className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:opacity-50 text-xs font-semibold text-white flex items-center gap-1 sm:gap-1.5 transition-all shadow-sm shadow-emerald-900/40 cursor-pointer"
               title="立即抓取最新华储网公告"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span>{isRefreshing ? '抓取中...' : '同步最新公告'}</span>
+              <span className="hidden sm:inline">{isRefreshing ? '抓取中...' : '同步最新公告'}</span>
+              <span className="sm:hidden">{isRefreshing ? '同步中' : '同步'}</span>
             </button>
             <button
               id="policy-modal-close-btn"
               onClick={onClose}
-              className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
 
         {/* 吐司提示 */}
         {toastMsg && (
-          <div className="bg-emerald-500/20 border-b border-emerald-500/30 px-6 py-2 text-xs font-medium text-emerald-300 flex items-center gap-2 animate-in fade-in">
+          <div className="bg-emerald-500/20 border-b border-emerald-500/30 px-4 sm:px-6 py-2 text-xs font-medium text-emerald-300 flex items-center gap-2 animate-in fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>{toastMsg}</span>
           </div>
         )}
 
         {/* 主体内容 */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6">
           {/* 1. 宏观调控核心量化看板 */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700/60">
@@ -363,13 +364,13 @@ export const PolicyNewsModal: React.FC<PolicyNewsModalProps> = ({
                   )}
 
                   {/* 底部来源外链 */}
-                  <div className="flex items-center justify-between pt-1 text-[11px] text-slate-400">
-                    <span>监控引擎: 华储网官方爬虫 + 新浪/金十 7x24 事件通道</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pt-1 text-[11px] text-slate-400">
+                    <span className="truncate">监控引擎: 华储网官方爬虫 + 新浪/金十 7x24 事件通道</span>
                     <a
                       href={item.rawUrl || 'http://www.cmerchant.com'}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                      className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 shrink-0"
                     >
                       <span>核对原文</span>
                       <ExternalLink className="w-3 h-3" />

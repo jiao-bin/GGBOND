@@ -58,11 +58,11 @@ export const PolicyNewsTicker: React.FC<PolicyNewsTickerProps> = ({
   return (
     <div
       id="policy-news-ticker"
-      className="bg-slate-950/90 border-b border-slate-800/80 text-slate-200 px-4 py-2 transition-all hover:bg-slate-900"
+      className="bg-slate-950/90 border-b border-slate-800/80 text-slate-200 px-3 sm:px-4 py-2 transition-all hover:bg-slate-900 overflow-hidden"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5">
+      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
         {/* 左侧：7x24 华储网与政策标签 */}
         <div className="flex items-center gap-2 shrink-0">
           <span className="relative flex h-2.5 w-2.5">
@@ -80,17 +80,17 @@ export const PolicyNewsTicker: React.FC<PolicyNewsTickerProps> = ({
 
         {/* 中间：快讯轮播内容 */}
         <div
-          className="flex-1 flex items-center gap-2 overflow-hidden cursor-pointer group w-full"
+          className="flex-1 min-w-0 flex items-center gap-1.5 overflow-hidden cursor-pointer group w-full"
           onClick={onOpenModal}
           title="点击查看华储网官方公告与政策详情"
         >
-          <span className="font-mono text-xs font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 shrink-0">
+          <span className="font-mono text-[10px] sm:text-xs font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 shrink-0">
             {currentItem.publishTime || '19:05:57'}
           </span>
-          <span className="text-xs font-medium text-slate-300 group-hover:text-white truncate">
+          <span className="text-xs font-medium text-slate-300 group-hover:text-white truncate min-w-0 flex-1">
             {currentItem.title}
           </span>
-          {getDirectionBadge(currentItem)}
+          <span className="shrink-0">{getDirectionBadge(currentItem)}</span>
           {currentItem.tonnage && (
             <span className="hidden md:inline-flex items-center text-[11px] font-mono font-bold text-amber-300 px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700 shrink-0">
               挂牌 {currentItem.tonnage.toLocaleString()} 吨

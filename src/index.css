@@ -100,16 +100,16 @@ h1, h2, h3, h4, h5, h6 {
 ========================================================= */
 /* Marathon 高阶半透磨砂卡片 (使后方生命游戏像素动画能够清晰显现透景) */
 .marathon-card-translucent {
-  background-color: rgba(8, 9, 13, 0.72) !important;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background-color: rgba(8, 9, 13, 0.62) !important;
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
   border-color: rgba(255, 255, 255, 0.14) !important;
 }
 
 .marathon-card-translucent-subtle {
-  background-color: rgba(0, 0, 0, 0.48) !important;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background-color: rgba(0, 0, 0, 0.42) !important;
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
 }
 
 .marathon-card-invert {

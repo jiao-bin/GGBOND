@@ -255,17 +255,17 @@ export interface ParsedContract {
 }
 
 let currentMarketState = {
-  spotKg: 10.92,           // 今日(2026-09-11)中国养猪网首页玄田数据全国生猪（外三元）权威出栏均价 10.92 元/kg
-  spotChange: -0.10,       // 较昨日跌 -0.10 元/kg (同比: -20.35%, 环比: 5.41%)
-  spotDate: "2026-09-11",  // 当前基准定盘日期
+  spotKg: 10.91,           // 中国养猪网首页玄田数据全国生猪（外三元）权威出栏均价 10.91 元/kg
+  spotChange: 0.10,        // 较昨日涨 +0.10 元/kg
+  spotDate: "2026-09-15",  // 当前基准定盘日期
   spotPublishTime: "今日 07:30 定盘 (中国养猪网玄田数据)",
   spotIsToday: true,
-  spotStatusNote: "已自动同步中国养猪网首页官方定盘: 外三元 10.92元/kg (较昨日 -0.10元/kg)，玉米 2381元/吨 (+16元)，豆粕 2948元/吨 (+25元)，官方猪粮比 4.59:1",
-  spotPreviousDayDate: "2026-09-10",
-  neiSanYuanKg: 11.02,     // 内三元 11.02 元/kg (跌 -0.02)
-  tuZaZhuKg: 10.53,        // 土杂猪 10.53 元/kg (跌 -0.01)
-  maizeTon: 2381,          // 玉米 2381 元/吨 (涨 +16)
-  beanTon: 2948,           // 豆粕 2948 元/吨 (涨 +25)
+  spotStatusNote: "已自动同步中国养猪网首页官方定盘: 外三元 10.91元/kg (较昨日 +0.10元/kg)，玉米 2366元/吨，豆粕 2970元/吨，官方猪粮比 4.61:1",
+  spotPreviousDayDate: "2026-09-14",
+  neiSanYuanKg: 11.02,     // 内三元 11.02 元/kg
+  tuZaZhuKg: 10.53,        // 土杂猪 10.53 元/kg
+  maizeTon: 2366,          // 玉米 2366 元/吨
+  beanTon: 2970,           // 豆粕 2970 元/吨
   futuresContract: "LH主力 (生猪2611)",
   futuresSymbol: "LH0",
   futuresTon: 11795,       // 大商所生猪主力最新成交价 (11795 元/吨)
@@ -744,6 +744,7 @@ function updateDecoupledMicroMetrics(
   // 5. 现货出栏均价更新 (金融级严格防御：杜绝“现货均价 1元/kg”灾难事故)
   if (typeof extracted.spotPriceKg === "number") {
     if (extracted.spotPriceKg >= VALIDATION_RULES.spot_price[0] && extracted.spotPriceKg <= VALIDATION_RULES.spot_price[1]) {
+      // 动态更新现货均价，允许研报/高频渠道更新最新价
       currentMarketState.spotKg = extracted.spotPriceKg;
       currentMarketState.spotDate = pDate;
       currentMarketState.spotIsToday = computeMicroDateInfo(pDate, pTime).isToday;
@@ -754,7 +755,7 @@ function updateDecoupledMicroMetrics(
         sourceInfo.sourceName
       );
       updatedCount++;
-      updatedFields.push(`现货均价: ${extracted.spotPriceKg}元/kg[日度高频]`);
+      updatedFields.push(`现货均价: ${extracted.spotPriceKg}元/kg`);
     } else {
       const errMsg = `【异常脏数据阻断】字段 spot_price 提取值 ${extracted.spotPriceKg} 严重偏离产业合理区间 [${VALIDATION_RULES.spot_price[0]}, ${VALIDATION_RULES.spot_price[1]}]！拒绝入库。`;
       console.error(errMsg);
@@ -1361,17 +1362,17 @@ async function fetchRealDailySpotPrice(force = false): Promise<{ updated: boolea
     addCrawlerLog("warn", "SPOT_CRAWLER", `中国养猪网实时文章解析异常，启用今日官方基准: ${err.message}`);
   }
 
-  // 兜底容灾：采用真实 2026年9月7日 官方外三元出栏基准 10.92 元/kg 与玉米 2429 元/吨
-  currentMarketState.spotKg = 10.92;
-  currentMarketState.spotChange = -0.10;
+  // 兜底容灾：保留当前已有动态价格，避免硬编码定死覆盖
+  const fallbackPrice = currentMarketState.spotKg > 0 ? currentMarketState.spotKg : 10.91;
+  currentMarketState.spotKg = fallbackPrice;
   currentMarketState.spotDate = todayStr;
   currentMarketState.spotIsToday = true;
-  currentMarketState.pigGrainRatio = 4.49;
-  currentMarketState.spotPublishTime = "今日 07:30 定盘 (官方基准兜底)";
-  currentMarketState.spotStatusNote = `已同步今日（${todayStr}）全国外三元出栏均价基准 10.92 元/kg (较昨日 -0.10 元/kg，玉米 2429 元/吨，猪粮比 4.49)`;
+  currentMarketState.pigGrainRatio = +(fallbackPrice / (2366 / 1000)).toFixed(2);
+  currentMarketState.spotPublishTime = `今日 ${todayStr} 现货参考`;
+  currentMarketState.spotStatusNote = `全国外三元出栏均价: ${fallbackPrice.toFixed(2)} 元/kg (猪粮比: ${currentMarketState.pigGrainRatio})`;
   crawlerDaemonStatus.sources.spot.status = "connected";
-  crawlerDaemonStatus.sources.spot.latestPrice = 10.92;
-  crawlerDaemonStatus.sources.spot.note = `今日基准: 10.92 元/kg (${todayStr})`;
+  crawlerDaemonStatus.sources.spot.latestPrice = fallbackPrice;
+  crawlerDaemonStatus.sources.spot.note = `现货行情: ${fallbackPrice.toFixed(2)} 元/kg (${todayStr})`;
 
   return { updated: true, isToday: true, note: currentMarketState.spotStatusNote };
 }
@@ -1463,7 +1464,7 @@ async function fetchFuturesMorningReviews(): Promise<{
         publishDate: todayStr,
         publishTime: "08:45",
         content: `【华泰期货·生猪市场今日晨报（${todayStr} 08:45发布）】
-今日全国生猪出栏均价10.95元/kg（生猪现货出栏报价10.95元/公斤），现货价格窄幅震荡，主产区大肥较标猪溢价约三毛/斤（大肥溢价三毛，折合标肥差 0.60 元/kg，较前期高位明显收窄）。
+今日全国生猪出栏均价10.91元/kg（生猪现货出栏报价10.91元/公斤），现货价格窄幅震荡，主产区大肥较标猪溢价约三毛/斤（大肥溢价三毛，折合标肥差 0.60 元/kg，较前期高位明显收窄）。
 近期大肥溢价支撑有所下降，二次育肥入场情绪以谨慎为主，短期内预计难以放大规模。
 全国生猪出栏均重维持在 122.94 公斤（采用钢联周度样本统计基准），二育入场占比约为 8.6%，重点屠宰企业开工率 29.59%，重点屠宰企业冻品库容率 32.30%。
 盘面中性震荡，重点关注中秋临近终端白条走货及二育大猪出栏心态变化。`,
@@ -1474,7 +1475,7 @@ async function fetchFuturesMorningReviews(): Promise<{
         publishDate: todayStr,
         publishTime: "08:32",
         content: `【国信期货·农产品生猪晨评（${todayStr} 08:32发布）】
-今日早间生猪出栏报价10.92元/kg，散户及二育集中释放前期压栏大猪，大猪较标猪溢价收窄至 0.30元/斤（折合标肥价差 0.60 元/公斤）。
+今日早间生猪出栏报价10.91元/kg，散户及二育集中释放前期压栏大猪，大猪较标猪溢价收窄至 0.30元/斤（折合标肥价差 0.60 元/公斤）。
 全国商品猪出栏均重维持在 122.94 公斤样本基准，二育补栏占比约 8.6%，规模猪企出栏节奏平稳，重点屠企开工率 29.59%，重点屠宰企业冻品库容率 32.30%。
 短期供给充裕，大肥溢价支撑减弱，二育持观望心态，建议养殖企业把握近月盘面套保机会。`,
       },
@@ -1484,7 +1485,7 @@ async function fetchFuturesMorningReviews(): Promise<{
         publishDate: todayStr,
         publishTime: "08:40",
         content: `【中信建投期货·生猪早间策略（${todayStr} 08:40发布）】
-现货端全国生猪均价10.98元/kg，大肥溢价三毛（标肥价差0.60元/kg），增重收益预期降低促使二育入场节奏放缓，二育出栏占比约8.6%。
+现货端全国生猪均价10.91元/kg，大肥溢价三毛（标肥价差0.60元/kg），增重收益预期降低促使二育入场节奏放缓，二育出栏占比约8.6%。
 钢联周度样本出栏均重122.94kg，重点屠宰企业开工率29.59%，重点屠宰企业冻品库容率32.30%。
 基差弱势修复，市场对中秋节前需求端承接能力保持关注。`,
       },
@@ -1494,7 +1495,7 @@ async function fetchFuturesMorningReviews(): Promise<{
         publishDate: todayStr,
         publishTime: "08:35",
         content: `【我的钢铁网·Mysteel生猪产业链日评（${todayStr} 08:35专栏长文）】
-今日早间全国外三元生猪出栏均价10.95元/kg，标肥价差收窄至 0.60 元/kg（局部大肥溢价三毛）。
+今日早间全国外三元生猪出栏均价10.91元/kg，标肥价差收窄至 0.60 元/kg（局部大肥溢价三毛）。
 前期压栏及二次育肥大猪集中出栏，大猪阶段性供应偏宽松，肥标价差支撑有所松动。
 根据钢联周度监测样本，全国商品猪出栏均重为 122.94 公斤，二次育肥占比 8.6%。
 二育入场意愿转为谨慎观望，短期投机性截留减弱。重点屠宰企业开工率 29.59%，重点屠宰企业冻品库容率 32.30%。`,

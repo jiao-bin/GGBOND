@@ -178,8 +178,9 @@ export default function App() {
   // 界面模式：'marathon' (全新战术未来主义视觉) 或 'classic' (留档经典金融终端)
   const [viewMode, setViewMode] = useState<'marathon' | 'classic'>('marathon');
 
-  // 像素生命游戏背景演化速率与扰动脉冲
+  // 像素生命游戏背景演化速率、扰动脉冲与亮度调控 (默认采用更幽暗深邃的 0.26 不透明度)
   const [lifeFps, setLifeFps] = useState<number>(32);
+  const [lifeOpacity, setLifeOpacity] = useState<number>(0.26);
   const [seedTrigger, setSeedTrigger] = useState<number>(0);
 
   const handleSetViewMode = (mode: 'marathon' | 'classic') => {
@@ -464,12 +465,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#000000] text-[#F3F3EE] font-tech flex selection:bg-[#D4FF00] selection:text-black relative">
-      {/* 极低功耗灰度 Pixel 风格生命游戏背景 (不挤占网页性能，透光显现) */}
+      {/* 极低功耗灰度 Pixel 风格生命游戏背景 (深色幽暗沉静，不抢占前台信息视认性) */}
       <PixelLifeBackground
         gridWidth={160}
         fps={lifeFps}
         density={0.14}
-        opacity={0.65}
+        opacity={lifeOpacity}
         seedTrigger={seedTrigger}
       />
 
@@ -671,35 +672,62 @@ export default function App() {
                 </span>
               </div>
 
-              {/* 背景生命游戏演化速率调控器 */}
-              <div className="flex items-center gap-1.5 pl-2 sm:border-l sm:border-white/10 text-[11px]">
-                <span className="text-slate-400 font-mono">像素演化:</span>
-                <div className="inline-flex rounded bg-black/70 border border-white/10 p-0.5">
-                  {[
-                    { label: '12Hz 慢速', fps: 12 },
-                    { label: '32Hz 疾速', fps: 32 },
-                    { label: '60Hz 极速', fps: 60 },
-                    { label: '100Hz 极限', fps: 100 },
-                  ].map((speed) => (
-                    <button
-                      key={speed.fps}
-                      onClick={() => setLifeFps(speed.fps)}
-                      className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-mono text-[10px] ${
-                        lifeFps === speed.fps
-                          ? 'bg-[#D4FF00] text-black font-bold shadow-xs'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {speed.label}
-                    </button>
-                  ))}
+              {/* 背景生命游戏演化速率与明暗调控器 */}
+              <div className="flex flex-wrap items-center gap-2 pl-2 sm:border-l sm:border-white/10 text-[11px]">
+                <div className="flex items-center gap-1">
+                  <span className="text-slate-400 font-mono">步频:</span>
+                  <div className="inline-flex rounded bg-black/70 border border-white/10 p-0.5">
+                    {[
+                      { label: '12Hz', fps: 12 },
+                      { label: '32Hz', fps: 32 },
+                      { label: '60Hz', fps: 60 },
+                      { label: '100Hz', fps: 100 },
+                    ].map((speed) => (
+                      <button
+                        key={speed.fps}
+                        onClick={() => setLifeFps(speed.fps)}
+                        className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-mono text-[10px] ${
+                          lifeFps === speed.fps
+                            ? 'bg-[#D4FF00] text-black font-bold shadow-xs'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {speed.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                <div className="flex items-center gap-1">
+                  <span className="text-slate-400 font-mono">明暗:</span>
+                  <div className="inline-flex rounded bg-black/70 border border-white/10 p-0.5">
+                    {[
+                      { label: '幽暗', opacity: 0.26 },
+                      { label: '微暗', opacity: 0.45 },
+                      { label: '适中', opacity: 0.65 },
+                      { label: '高显', opacity: 0.88 },
+                    ].map((op) => (
+                      <button
+                        key={op.opacity}
+                        onClick={() => setLifeOpacity(op.opacity)}
+                        className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-mono text-[10px] ${
+                          lifeOpacity === op.opacity
+                            ? 'bg-[#D4FF00] text-black font-bold shadow-xs'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {op.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button
                   onClick={() => setSeedTrigger((prev) => prev + 1)}
                   title="散布新生滑翔机与生命群落"
                   className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-200 text-[10px] font-mono cursor-pointer transition-colors"
                 >
-                  ⚡ 注入生命脉冲
+                  ⚡ 脉冲
                 </button>
               </div>
             </div>
