@@ -28,6 +28,8 @@ interface HeaderProps {
   onOpenGeminiModal: () => void;
   onOpenRulesModal: () => void;
   onOpenReportModal?: () => void;
+  onOpenPolicyModal?: () => void;
+  policyNewsCount?: number;
   onOpenSourceModal?: () => void;
   activeAlertsCount: number;
   lastUpdateTime: string;
@@ -56,6 +58,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenGeminiModal,
   onOpenRulesModal,
   onOpenReportModal,
+  onOpenPolicyModal,
+  policyNewsCount,
   onOpenSourceModal,
   activeAlertsCount,
   lastUpdateTime,
@@ -216,6 +220,25 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
                 <span>自动采集管道</span>
+              </button>
+            )}
+
+            {/* 华储网官方储备肉公告 & 7x24 快讯 */}
+            {onOpenPolicyModal && (
+              <button
+                id="header-open-policy-btn"
+                type="button"
+                onClick={onOpenPolicyModal}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 transition shadow-sm"
+                title="华储网官方公告 (www.cmerchant.com) 与金十/新浪 7x24 储备肉/收储/抛储/发改委预警"
+              >
+                <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+                <span>华储网政策</span>
+                {policyNewsCount !== undefined && policyNewsCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white">
+                    {policyNewsCount}
+                  </span>
+                )}
               </button>
             )}
 

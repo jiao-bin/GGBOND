@@ -212,8 +212,8 @@ const premiumRate = ((futuresPriceTon - spotTon) / spotTon) * 100; // 期货对�
                   <span className="font-mono text-[10px] text-slate-500">server.ts</span>
                 </div>
                 <div className="font-mono p-2.5 rounded bg-slate-900 border border-slate-800 text-[11px] text-emerald-300">
-                  {`// 候选模型队列: 优先 gemini-3.6-flash，降级备选 gemini-3.1-flash-lite
-const candidateModels = ["gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-3.8-flash"];
+                  {`// 候选模型队列: 优先 gemini-3.8-flash，降级备选 gemini-flash-latest 与 gemini-3.1-flash-lite
+const candidateModels = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
 // 自动清洗与防御 null.toFixed 崩溃机制
 const formatSafeNum = (val, digits = 2, fallback = '-') =>
   typeof val === 'number' && !isNaN(val) ? val.toFixed(digits) : fallback;`}

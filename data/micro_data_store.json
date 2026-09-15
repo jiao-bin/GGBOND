@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "lastPersistedTime": "2026/9/12 15:55:34",
+  "lastReason": "手动校准冻品库容率 32.3%",
+  "currentMicroData": {
+    "standardFatDiff": 0.6,
+    "diffTrend": "narrowing",
+    "diffChange": -0.25,
+    "diffPrev": 0.85,
+    "avgSlaughterWeight": 122.94,
+    "secondFatteningRate": 8.6,
+    "slaughterOperatingRate": 29.59,
+    "frozenInventoryRate": 32.3,
+    "lastReportSource": "华泰期货/Mysteel生猪晨评专栏 (大模型语义提取 & 指标解耦异步更新)",
+    "lastReportTime": "2026-09-11 08:30",
+    "originalPublishDate": "2026-09-11",
+    "originalPublishTime": "08:30",
+    "isTodayReport": true,
+    "relativeDateText": "今日最新 (08:30)",
+    "reportDateNotice": "【指标解耦异步刷新生效】日度高频指标(现货价、标肥差)今日已刷新；周度基准指标(均重122.94kg、二育8.6%)平稳沿用当周样本基准",
+    "extractedSnippet": "【华泰期货·生猪市场晨评（2026年9月11日 08:30发布）】今日现货窄幅震荡，大肥较标猪溢价约三毛/斤（折合标肥差0.60元/kg，较前期收窄）。随着散户大猪出栏加快，大肥溢价支撑有所下降，二次育肥入场情绪以谨慎为主，短期难以大幅扩张。全国样本出栏均重维持在122.94公斤（采用钢联周度样本统计基准），二育占比8.6%...",
+    "standardFatSubText": "大肥溢价三毛/斤折合0.60元/kg，大猪集中出栏使得溢价支撑收窄",
+    "secondFatteningSubText": "标肥价差收窄削弱增重预期，二育入场转为谨慎观望，短期补栏难以放大",
+    "metricsMeta": {
+      "standardFat": {
+        "frequency": "daily",
+        "freqLabel": "日度高频",
+        "updatedAt": "08:30",
+        "publishDate": "2026-09-11",
+        "isToday": true,
+        "relativeText": "今日最新 (08:30)",
+        "source": "华泰期货·生猪市场晨报",
+        "unitConversionNote": "原文行话“大肥溢价三毛/斤”，经 1kg=2市斤 换算为 0.60元/kg (收窄)"
+      },
+      "avgWeight": {
+        "frequency": "weekly",
+        "freqLabel": "周度基准",
+        "updatedAt": "08:30",
+        "publishDate": "2026-09-07",
+        "isToday": false,
+        "relativeText": "周度基准 (09-07 抽样)",
+        "source": "钢联农产品/华泰期货周度样本监测"
+      },
+      "secondFattening": {
+        "frequency": "weekly",
+        "freqLabel": "周度基准",
+        "updatedAt": "08:30",
+        "publishDate": "2026-09-07",
+        "isToday": false,
+        "relativeText": "周度样本 (09-07 统计)",
+        "source": "钢联农产品/华泰期货周度样本监测"
+      },
+      "slaughterOperating": {
+        "frequency": "weekly",
+        "freqLabel": "周度基准",
+        "updatedAt": "08:30",
+        "publishDate": "2026-09-07",
+        "isToday": false,
+        "relativeText": "周度监测 (09-07 样本)",
+        "source": "重点屠企周度开工率监测"
+      },
+      "frozenInventory": {
+        "frequency": "weekly",
+        "freqLabel": "周度基准",
+        "updatedAt": "16:00",
+        "publishDate": "2026-09-11",
+        "isToday": false,
+        "relativeText": "周度基准 (09-11 抽样)",
+        "source": "产业研究员手动校准/周度样本录入"
+      },
+      "spotPrice": {
+        "frequency": "daily",
+        "freqLabel": "日度高频",
+        "updatedAt": "07:30",
+        "publishDate": "2026-09-11",
+        "isToday": true,
+        "relativeText": "今日最新 (07:30 定盘)",
+        "source": "中国养猪网全国外三元出栏均价"
+      }
+    }
+  },
+  "weeklyHistory": [
+    {
+      "weekLabel": "2026-W34 (08-21)",
+      "date": "2026-08-21",
+      "frozenInventoryRate": 30.8,
+      "slaughterOperatingRate": 28.1,
+      "avgSlaughterWeight": 121.8,
+      "secondFatteningRate": 7.8,
+      "source": "钢联农产品/重点屠企周度样本统计",
+      "note": "立秋初期终端消费淡季，屠企开工率处于低位，以主动去库存为主",
+      "updatedAt": "2026-08-21 16:30"
+    },
+    {
+      "weekLabel": "2026-W35 (08-28)",
+      "date": "2026-08-28",
+      "frozenInventoryRate": 31.4,
+      "slaughterOperatingRate": 28.9,
+      "avgSlaughterWeight": 122.2,
+      "secondFatteningRate": 8.2,
+      "source": "钢联农产品/重点屠企周度样本统计",
+      "note": "屠企宰量温和反弹，中秋备货前期冷冻分割品小幅被动入库",
+      "updatedAt": "2026-08-28 16:30"
+    },
+    {
+      "weekLabel": "2026-W36 (09-04)",
+      "date": "2026-09-04",
+      "frozenInventoryRate": 31.9,
+      "slaughterOperatingRate": 29.2,
+      "avgSlaughterWeight": 122.6,
+      "secondFatteningRate": 8.5,
+      "source": "钢联农产品/重点屠企周度样本统计",
+      "note": "开学季备货提振平稳，深加工提货节奏一般，库容率微增至31.9%",
+      "updatedAt": "2026-09-04 16:30"
+    },
+    {
+      "weekLabel": "周度样本 (09-11)",
+      "date": "2026-09-11",
+      "frozenInventoryRate": 32.3,
+      "slaughterOperatingRate": 29.59,
+      "avgSlaughterWeight": 122.94,
+      "secondFatteningRate": 8.6,
+      "source": "重点屠企周度样本统计",
+      "note": "校准测试",
+      "updatedAt": "2026/9/12 15:55:34"
+    }
+  ]
+}

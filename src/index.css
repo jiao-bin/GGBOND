@@ -1,1 +1,275 @@
 @import "tailwindcss";
+
+:root {
+  /* Marathon Official Proportional Palette: Black (75-80%) / Electric Cobalt Blue (15-18%) / Neon Volt Green (3-5%) */
+  --marathon-black: #000000;
+  --marathon-black-card: #08090D;
+  --marathon-black-surface: #0E1017;
+  --marathon-blue: #2600EB;
+  --marathon-blue-hover: #3714FF;
+  --marathon-blue-deep: #160099;
+  --marathon-volt: #D4FF00;
+  --marathon-volt-dim: #A8CC00;
+  --marathon-border: rgba(255, 255, 255, 0.12);
+
+  /* 偏厚重工业黑体字族 (Heavy Chinese Gothic / HeiTi Font Stack) */
+  --font-heiti: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Heiti SC", "Source Han Sans SC", "SimHei", system-ui, sans-serif;
+}
+
+body {
+  background-color: #000000;
+  color: #F1F3F9;
+  font-family: var(--font-heiti);
+  font-weight: 600; /* 全局中文基底提升为偏厚重的 600 SemiBold */
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* 按钮、输入框、常规控件强制继承厚重黑体 */
+button, input, select, textarea {
+  font-family: var(--font-heiti);
+}
+
+/* 标题与板块名统一提升为 800/900 特重黑体 */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heiti);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.font-tech {
+  font-family: 'JetBrains Mono', var(--font-heiti), monospace;
+  font-weight: 600;
+}
+
+.font-display {
+  font-family: 'Space Grotesk', var(--font-heiti), sans-serif;
+  font-weight: 800;
+}
+
+.font-heiti-heavy {
+  font-family: var(--font-heiti);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+/* Vertical banner text for Marathon left rail */
+.vertical-lr-text {
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+}
+
+@keyframes marquee-vertical {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+.animate-marquee-vertical {
+  animation: marquee-vertical 28s linear infinite;
+}
+
+.animate-marquee-vertical:hover {
+  animation-play-state: paused;
+}
+
+/* Custom Tactical Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 1px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2600EB;
+}
+
+/* =========================================================
+   Marathon Signature Bright Volt Green Inverted Data Windows
+   (Borderless, high-contrast, perfectly visible small data & graphics)
+========================================================= */
+/* Marathon 高阶半透磨砂卡片 (使后方生命游戏像素动画能够清晰显现透景) */
+.marathon-card-translucent {
+  background-color: rgba(8, 9, 13, 0.72) !important;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.marathon-card-translucent-subtle {
+  background-color: rgba(0, 0, 0, 0.48) !important;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.marathon-card-invert {
+  transition: background-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.22s ease;
+}
+
+/* 悬停状态：高亮电光绿背景，严禁任何描边与外发光 */
+.marathon-card-invert:hover {
+  background-color: #D4FF00 !important;
+  border-color: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* 内部所有元素在悬停时完全取消描边与分割线（指示箭头除外） */
+.marathon-card-invert:hover,
+.marathon-card-invert:hover *:not(.gauge-pointer-arrow),
+.marathon-card-invert:hover div:not(.gauge-pointer-arrow),
+.marathon-card-invert:hover span:not(.gauge-pointer-arrow) {
+  border-color: transparent !important;
+}
+
+/* 反相：常规文字与数字全部反相为纯黑，清晰锐利（严禁作用于滑块内部数值标签） */
+.marathon-card-invert:hover h1,
+.marathon-card-invert:hover h2,
+.marathon-card-invert:hover h3,
+.marathon-card-invert:hover h4,
+.marathon-card-invert:hover p,
+.marathon-card-invert:hover span:not(.badge-tag):not(.change-pill-negative):not(.bar-text-light):not(.preserve-color):not(.bar-btn-text):not(.bar-plus-symbol):not(.bar-invert):not(.bar-invert *):not(.gauge-pointer):not(.gauge-pointer *):not(.pointer-val),
+.marathon-card-invert:hover strong,
+.marathon-card-invert:hover label,
+.marathon-card-invert:hover div.text-invert {
+  color: #000000 !important;
+}
+
+/* 常规图标反相为纯黑（排除底部工具栏和特定保留元素） */
+.marathon-card-invert:hover svg:not(.preserve-color):not(.bar-invert):not(.bar-invert *) {
+  color: #000000 !important;
+  stroke: #000000 !important;
+}
+
+/* 微型走势图形 (Sparklines) 反相为纯黑线与透明黑渐变填充 */
+.marathon-card-invert:hover svg.sparkline path.sparkline-line {
+  stroke: #000000 !important;
+  stroke-width: 2.2px !important;
+}
+
+.marathon-card-invert:hover svg.sparkline path.sparkline-fill {
+  fill: #000000 !important;
+  fill-opacity: 0.15 !important;
+}
+
+/* 小标签 (SPOT, FUTURES, BASIS, EQUITY, MICRO 等)：白底黑字，绝不遮挡文字，立体清晰 */
+.badge-tag,
+.marathon-card-invert:hover .badge-tag {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.badge-tag *,
+.marathon-card-invert:hover .badge-tag * {
+  color: #000000 !important;
+}
+
+/* 涨幅微型药丸胶囊：微暗黑底 + 纯黑字 */
+.marathon-card-invert:hover .change-pill-positive {
+  background-color: rgba(0, 0, 0, 0.12) !important;
+  color: #000000 !important;
+  border: none !important;
+}
+
+.marathon-card-invert:hover .change-pill-positive * {
+  color: #000000 !important;
+}
+
+/* 跌幅微型药丸胶囊：高对比红底白字 */
+.marathon-card-invert:hover .change-pill-negative {
+  background-color: #FF3B00 !important;
+  color: #FFFFFF !important;
+  border: none !important;
+}
+
+.marathon-card-invert:hover .change-pill-negative * {
+  color: #FFFFFF !important;
+}
+
+/* 底部功能条：纯黑底，高对比度荧光绿+亮白，绝无黑色遮蔽 */
+.marathon-card-invert:hover .bar-invert,
+.marathon-card-invert:hover div.bar-invert {
+  background-color: #000000 !important;
+  border: none !important;
+}
+
+.marathon-card-invert:hover .bar-invert span,
+.marathon-card-invert:hover .bar-invert button,
+.marathon-card-invert:hover .bar-invert a,
+.marathon-card-invert:hover .bar-invert .bar-btn-text,
+.marathon-card-invert:hover .bar-invert .bar-plus-symbol {
+  color: #D4FF00 !important;
+  opacity: 1 !important;
+}
+
+.marathon-card-invert:hover .bar-invert svg {
+  color: #D4FF00 !important;
+  stroke: #D4FF00 !important;
+  opacity: 1 !important;
+}
+
+.marathon-card-invert:hover .bar-invert .bar-text-light {
+  color: #FFFFFF !important;
+  opacity: 1 !important;
+}
+
+.marathon-card-invert:hover select {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 基差滑块指针：底色固定为纯白（#FFFFFF），内部文字纯黑加粗（#000000），下方指示箭头为纯白（#FFFFFF）
+   无论是常规暗黑底色还是悬停高亮荧光绿底色，指针均以白色框与下方的黑色标尺轨道形成鲜明界限，彻底杜绝糊成一块 */
+.gauge-pointer,
+.marathon-card-invert .gauge-pointer,
+.marathon-card-invert:hover .gauge-pointer,
+.marathon-card-invert:hover span.gauge-pointer,
+.marathon-card-invert:hover div.gauge-pointer,
+.marathon-card-invert:hover .gauge-pointer * {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  border-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+.pointer-val,
+.marathon-card-invert .pointer-val,
+.marathon-card-invert:hover .pointer-val {
+  color: #000000 !important;
+  font-weight: 900 !important;
+}
+
+.gauge-pointer-arrow,
+.marathon-card-invert .gauge-pointer-arrow,
+.marathon-card-invert:hover .gauge-pointer-arrow {
+  border-top-color: #FFFFFF !important;
+  border-left-color: transparent !important;
+  border-right-color: transparent !important;
+  border-bottom-color: transparent !important;
+}
+
+/* 底部策略建议在悬停反相时：加粗为纯黑色，确保在荧光绿背景下清晰易读 */
+.marathon-card-invert:hover .advice-text {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+.marathon-card-invert:hover .advice-label {
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+
+
+

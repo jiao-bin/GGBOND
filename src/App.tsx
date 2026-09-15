@@ -19,8 +19,22 @@ import { GeminiDiagnosisModal } from './components/GeminiDiagnosisModal';
 import { MicroDataPanel } from './components/MicroDataPanel';
 import { ReportParserModal } from './components/ReportParserModal';
 import { OpenSourceModal } from './components/OpenSourceModal';
+import { PolicyNewsTicker } from './components/PolicyNewsTicker';
+import { PolicyNewsModal } from './components/PolicyNewsModal';
+import { FrozenInventoryModal } from './components/FrozenInventoryModal';
+import { PixelLifeBackground } from './components/PixelLifeBackground';
 import { DEFAULT_RULES, evaluateRules, formatReportText } from './utils/ruleEngine';
 import { soundAlarm } from './utils/audioAlarm';
+
+// 留档归档版本与 Marathon 战术新版组件
+import { ClassicApp } from './archive/ClassicApp';
+import { MarathonHeader } from './components/marathon/MarathonHeader';
+import { MarathonPolicyTicker } from './components/marathon/MarathonPolicyTicker';
+import { MarathonScenarioBar } from './components/marathon/MarathonScenarioBar';
+import { MarathonKeyMetrics } from './components/marathon/MarathonKeyMetrics';
+import { MarathonMicroPanel } from './components/marathon/MarathonMicroPanel';
+import { MarathonBasisGauge } from './components/marathon/MarathonBasisGauge';
+import { MarathonChartAndAlerts } from './components/marathon/MarathonChartAndAlerts';
 
 // 初始高仿真基准数据
 const INITIAL_MARKET_DATA: HogMarketData = {
@@ -156,7 +170,21 @@ export default function App() {
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [isGeminiModalOpen, setIsGeminiModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
+  const [isFrozenModalOpen, setIsFrozenModalOpen] = useState(false);
   const [isOpenSourceModalOpen, setIsOpenSourceModalOpen] = useState(false);
+  const [isRefreshingPolicy, setIsRefreshingPolicy] = useState(false);
+
+  // 界面模式：'marathon' (全新战术未来主义视觉) 或 'classic' (留档经典金融终端)
+  const [viewMode, setViewMode] = useState<'marathon' | 'classic'>('marathon');
+
+  // 像素生命游戏背景演化速率与扰动脉冲
+  const [lifeFps, setLifeFps] = useState<number>(32);
+  const [seedTrigger, setSeedTrigger] = useState<number>(0);
+
+  const handleSetViewMode = (mode: 'marathon' | 'classic') => {
+    setViewMode(mode);
+  };
 
   // 避免重复发声的记录
   const lastAlertSignature = useRef<string>('');
@@ -366,6 +394,7 @@ export default function App() {
     avgSlaughterWeight?: number;
     secondFatteningRate?: number;
     slaughterOperatingRate?: number;
+    frozenInventoryRate?: number;
     lastReportSource?: string;
     extractedSnippet?: string;
     originalPublishDate?: string;
@@ -389,93 +418,304 @@ export default function App() {
     }
   };
 
+  // 用户/研究员手动微调或录入最新周度冻品库容率，即刻原子落盘持久化
+  const handleUpdateFrozenRate = async (rate: number, date?: string, note?: string) => {
+    try {
+      const res = await fetch('/api/micro-data/update-frozen-rate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rate, date, note }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        await fetchMarketData();
+      } else {
+        throw new Error(json.error || '更新失败');
+      }
+    } catch (err) {
+      console.error('Update frozen rate error:', err);
+      throw err;
+    }
+  };
+
+  // 手动即时刷新华储网官方公告与政策快讯
+  const handleRefreshPolicyNews = async () => {
+    setIsRefreshingPolicy(true);
+    try {
+      const res = await fetch('/api/policy-news/refresh', { method: 'POST' });
+      const json = await res.json();
+      if (json.success && json.news) {
+        setData((prev) => ({
+          ...prev,
+          latestPolicyNews: json.news,
+        }));
+      }
+    } catch (err) {
+      console.error('Refresh policy news failed:', err);
+    } finally {
+      setIsRefreshingPolicy(false);
+    }
+  };
+
+  // 如果用户选择查看留档经典版本
+  if (viewMode === 'classic') {
+    return <ClassicApp onSwitchToMarathonUI={() => handleSetViewMode('marathon')} />;
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-emerald-500 selection:text-white">
-      {/* 顶部主导航与高频控制 */}
-      <Header
-        autoRefresh={autoRefresh}
-        setAutoRefresh={setAutoRefresh}
-        refreshInterval={refreshInterval}
-        setRefreshInterval={setRefreshInterval}
-        countdown={countdown}
-        onManualRefresh={fetchMarketData}
-        isRefreshing={isRefreshing}
-        audioAlarmEnabled={audioAlarmEnabled}
-        setAudioAlarmEnabled={setAudioAlarmEnabled}
-        onOpenWebhookModal={() => setIsWebhookModalOpen(true)}
-        onOpenGeminiModal={() => setIsGeminiModalOpen(true)}
-        onOpenRulesModal={() => setIsRulesModalOpen(true)}
-        onOpenReportModal={() => setIsReportModalOpen(true)}
-        onOpenSourceModal={() => setIsOpenSourceModalOpen(true)}
-        activeAlertsCount={activeAlerts.length}
-        lastUpdateTime={data.timestamp}
-        marketStatus={data.marketStatus}
-        onToggleSandbox={handleToggleSandbox}
+    <div className="min-h-screen bg-[#000000] text-[#F3F3EE] font-tech flex selection:bg-[#D4FF00] selection:text-black relative">
+      {/* 极低功耗灰度 Pixel 风格生命游戏背景 (不挤占网页性能，透光显现) */}
+      <PixelLifeBackground
+        gridWidth={160}
+        fps={lifeFps}
+        density={0.14}
+        opacity={0.65}
+        seedTrigger={seedTrigger}
       />
 
-      {/* 主体监控视窗 */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-5 sm:px-6 space-y-4">
-        {/* 1. 快速场景回测与异动触发条 */}
-        <ScenarioSimulationBar
-          onApplyScenario={handleApplyScenario}
-          onResetDefault={handleResetDefault}
-        />
+      {/* Marathon 经典高阶黑绿蓝左侧结构边栏 (保持标志性深蓝底轨 + 荧光绿/白高对比遥测) */}
+      <aside className="hidden lg:flex w-16 xl:w-20 bg-[#2000E0] border-r border-[#3B14FF] relative flex-col items-center justify-between py-5 shrink-0 select-none z-20 sticky top-0 h-screen overflow-hidden">
+        {/* 顶部战术符号 */}
+        <div className="flex flex-col items-center gap-2 shrink-0 z-20 bg-[#2000E0] pb-2">
+          <div className="w-9 h-9 bg-black text-[#D4FF00] flex items-center justify-center font-black text-sm border border-[#D4FF00] shadow-[0_0_12px_rgba(0,0,0,0.5)]">
+            猪
+          </div>
+          <span className="text-xs font-mono text-white/90 font-bold tracking-tight">[ 01 ]</span>
+          <span className="w-2 h-2 bg-[#D4FF00] animate-pulse shadow-[0_0_8px_#D4FF00]" />
+        </div>
 
-        {/* 2. 核心指标矩阵 (现货、期货、升水率、牧原股份) */}
-        <KeyMetricsGrid
-          data={data}
-          selectedContract={selectedContract}
-          onSelectContract={setSelectedContract}
-          onUpdateSpotPrice={handleUpdateSpotPrice}
-          onSyncSpotPrice={handleSyncSpotPrice}
-        />
+        {/* 中间纵向无缝滚动战术标语轨道 (Vertical Marquee with English & Chinese) */}
+        <div className="flex-1 w-full relative overflow-hidden my-3 flex items-center justify-center">
+          {/* 上下边缘渐变遮罩 */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-[#2000E0] via-[#2000E0]/80 to-transparent z-10" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#2000E0] via-[#2000E0]/80 to-transparent z-10" />
 
-        {/* 3. 商业级微观数据指标 (标肥价差、出栏均重、二育占比 - 微信早报白嫖提取) */}
-        <MicroDataPanel
-          data={data}
+          {/* 连续循环滚动容器 */}
+          <div className="animate-marquee-vertical w-full flex flex-col items-center py-2 cursor-default">
+            {/* 第一组 */}
+            <div className="flex flex-col items-center gap-8 py-6">
+              <div className="vertical-lr-text text-[#D4FF00] font-black text-lg xl:text-xl tracking-[0.25em] font-display drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+                生猪高频监控雷达
+              </div>
+              <div className="vertical-lr-text text-white font-mono font-black text-xs xl:text-sm tracking-[0.3em] uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+                HOG QUANT RADAR
+              </div>
+              <div className="vertical-lr-text text-[#D4FF00] font-mono text-xs font-bold tracking-widest">
+                // TELEMETRY LIVE
+              </div>
+              <div className="vertical-lr-text text-white font-black text-base xl:text-lg tracking-[0.22em] font-display drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+                期现基差升水率
+              </div>
+              <div className="vertical-lr-text text-white/95 font-mono font-black text-xs xl:text-sm tracking-[0.28em] uppercase">
+                BASIS SPREAD MONITOR
+              </div>
+              <div className="vertical-lr-text text-[#D4FF00] font-mono text-xs font-bold tracking-widest">
+                // DCE LH2505
+              </div>
+              <div className="vertical-lr-text text-[#D4FF00] font-black text-base xl:text-lg tracking-[0.22em] font-display drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+                微观供需高频遥测
+              </div>
+              <div className="vertical-lr-text text-white font-mono font-black text-xs xl:text-sm tracking-[0.28em] uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+                MICRO SUPPLY & DEMAND
+              </div>
+              <div className="vertical-lr-text text-[#D4FF00] font-mono text-xs font-bold tracking-widest">
+                // 002714 MUYUAN
+              </div>
+              <div className="vertical-lr-text text-white font-black text-base xl:text-lg tracking-[0.22em] font-display drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+                极端行情压力测试
+              </div>
+              <div className="vertical-lr-text text-white/95 font-mono font-black text-xs xl:text-sm tracking-[0.28em] uppercase">
+                STRESS TEST PROTOCOL
+              </div>
+              <div className="text-[#D4FF00] font-mono text-xs py-2 font-black tracking-widest">
+                [ + + + ]
+              </div>
+            </div>
+
+            {/* 第二组（用于无缝连续循环） */}
+            <div className="flex flex-col items-center gap-8 py-6" aria-hidden="true">
+              <div className="vertical-lr-text text-[#D4FF00] font-black text-lg xl:text-xl tracking-[0.25em] font-display drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+                生猪高频监控雷达
+              </div>
+              <div className="vertical-lr-text text-white font-mono font-black text-xs xl:text-sm tracking-[0.3em] uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+                HOG QUANT RADAR
+              </div>
+              <div className="vertical-lr-text text-[#D4FF00] font-mono text-xs font-bold tracking-widest">
+                // TELEMETRY LIVE
+              </div>
+              <div className="vertical-lr-text text-white font-black text-base xl:text-lg tracking-[0.22em] font-display drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+                期现基差升水率
+              </div>
+              <div className="vertical-lr-text text-white/95 font-mono font-black text-xs xl:text-sm tracking-[0.28em] uppercase">
+                BASIS SPREAD MONITOR
+              </div>
+              <div className="vertical-lr-text text-[#D4FF00] font-mono text-xs font-bold tracking-widest">
+                // DCE LH2505
+              </div>
+              <div className="vertical-lr-text text-[#D4FF00] font-black text-base xl:text-lg tracking-[0.22em] font-display drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+                微观供需高频遥测
+              </div>
+              <div className="vertical-lr-text text-white font-mono font-black text-xs xl:text-sm tracking-[0.28em] uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+                MICRO SUPPLY & DEMAND
+              </div>
+              <div className="vertical-lr-text text-[#D4FF00] font-mono text-xs font-bold tracking-widest">
+                // 002714 MUYUAN
+              </div>
+              <div className="vertical-lr-text text-white font-black text-base xl:text-lg tracking-[0.22em] font-display drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+                极端行情压力测试
+              </div>
+              <div className="vertical-lr-text text-white/95 font-mono font-black text-xs xl:text-sm tracking-[0.28em] uppercase">
+                STRESS TEST PROTOCOL
+              </div>
+              <div className="text-[#D4FF00] font-mono text-xs py-2 font-black tracking-widest">
+                [ + + + ]
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 底部十字标位与系统状态 */}
+        <div className="flex flex-col items-center gap-2 shrink-0 z-20 bg-[#2000E0] pt-2">
+          <span className="text-[10px] font-mono text-white/80 font-bold tracking-tighter">SEASON 02</span>
+          <span className="text-xs font-mono text-[#D4FF00] font-black">[ + ]</span>
+        </div>
+      </aside>
+
+      {/* 主工作区 (背景透明，使下方的生命游戏像素动画能够透过卡片间隙与半透框显现) */}
+      <div className="flex-1 min-w-0 flex flex-col bg-transparent relative z-10">
+        {/* Marathon 战术顶部主导航 */}
+        <MarathonHeader
+          autoRefresh={autoRefresh}
+          setAutoRefresh={setAutoRefresh}
+          refreshInterval={refreshInterval}
+          setRefreshInterval={setRefreshInterval}
+          countdown={countdown}
+          onManualRefresh={fetchMarketData}
+          isRefreshing={isRefreshing}
+          audioAlarmEnabled={audioAlarmEnabled}
+          setAudioAlarmEnabled={setAudioAlarmEnabled}
+          onOpenWebhookModal={() => setIsWebhookModalOpen(true)}
+          onOpenGeminiModal={() => setIsGeminiModalOpen(true)}
+          onOpenRulesModal={() => setIsRulesModalOpen(true)}
           onOpenReportModal={() => setIsReportModalOpen(true)}
+          onOpenPolicyModal={() => setIsPolicyModalOpen(true)}
+          policyNewsCount={data.latestPolicyNews?.length || 0}
+          onOpenSourceModal={() => setIsOpenSourceModalOpen(true)}
+          activeAlertsCount={activeAlerts.length}
+          lastUpdateTime={data.timestamp}
+          marketStatus={data.marketStatus}
+          onToggleSandbox={handleToggleSandbox}
+          onSwitchToClassic={() => handleSetViewMode('classic')}
         />
 
-        {/* 4. 期现升贴水博弈标尺与基差分布 */}
-        <BasisGauge
-          premiumRate={data.spread.premiumRate}
-          basisTon={data.spread.basisTon}
+        {/* 华储网官方公告与 7x24 政策快讯轮播横幅 */}
+        <MarathonPolicyTicker
+          newsList={data.latestPolicyNews || []}
+          onOpenModal={() => setIsPolicyModalOpen(true)}
+          onRefresh={handleRefreshPolicyNews}
+          isRefreshing={isRefreshingPolicy}
         />
 
-        {/* 4. 左右双栏结构：左侧动态图表 + 板块联动，右侧预警中心与历史流水 */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* 左侧大栏: 分时折线图与养殖龙头对照 (占 7 列) */}
-          <div className="lg:col-span-7 space-y-4">
-            <RadarChartSection history={history} />
-            <SectorPeersCard data={data} />
-          </div>
+        {/* 主体监控视窗 */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 space-y-3.5">
+          {/* 1. 快速场景回测与异动触发条 */}
+          <MarathonScenarioBar
+            onApplyScenario={handleApplyScenario}
+            onResetDefault={handleResetDefault}
+            isSandbox={data.marketStatus?.isSandbox}
+            onToggleSandbox={handleToggleSandbox}
+          />
 
-          {/* 右侧边栏: 预警监控中心、异动事件流与飞书推送 (占 5 列) */}
-          <div className="lg:col-span-5 space-y-4">
-            <AlertPanel
-              alerts={activeAlerts}
-              alertHistory={alertHistory}
-              currentData={data}
-              onDispatchAlert={dispatchToWebhook}
-              onClearHistory={() => setAlertHistory([])}
-              onOpenWebhookModal={() => setIsWebhookModalOpen(true)}
-            />
-          </div>
-        </div>
-      </main>
+          {/* 2. 核心指标矩阵 (现货、期货、升水率、牧原股份) */}
+          <MarathonKeyMetrics
+            data={data}
+            selectedContract={selectedContract}
+            onSelectContract={setSelectedContract}
+            onUpdateSpotPrice={handleUpdateSpotPrice}
+            onSyncSpotPrice={handleSyncSpotPrice}
+          />
 
-      {/* 底部免责声明与状态 */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-4 text-center text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>0成本生猪高频监控雷达 (Pork Radar Dynamic Free) · 持续高频推流测算中</span>
+          {/* 3. 商业级微观数据指标阵列 (标肥价差、出栏均重、二育占比、屠企开工、冻品库容记忆) */}
+          <MarathonMicroPanel
+            data={data}
+            onOpenReportModal={() => setIsReportModalOpen(true)}
+            onOpenFrozenModal={() => setIsFrozenModalOpen(true)}
+          />
+
+          {/* 4. 期现升贴水博弈标尺与基差分布 */}
+          <MarathonBasisGauge
+            premiumRate={data.spread.premiumRate}
+            basisTon={data.spread.basisTon}
+          />
+
+          {/* 5. 左右双栏结构：左侧分时示波器 + 板块集群，右侧战术警戒控制中心 */}
+          <MarathonChartAndAlerts
+            history={history}
+            data={data}
+            activeAlerts={activeAlerts}
+            alertHistory={alertHistory}
+            onDispatchAlert={dispatchToWebhook}
+            onClearHistory={() => setAlertHistory([])}
+            onOpenWebhookModal={() => setIsWebhookModalOpen(true)}
+          />
+        </main>
+
+        {/* 底部战术状态栏 */}
+        <footer className="border-t border-white/10 bg-[#060709]/75 backdrop-blur-xs py-2.5 text-xs font-tech text-slate-500">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-none bg-[#2000E0]" />
+                <span className="text-slate-300 font-bold">
+                  生猪高频监控雷达 · 产业期现量化系统
+                </span>
+              </div>
+
+              {/* 背景生命游戏演化速率调控器 */}
+              <div className="flex items-center gap-1.5 pl-2 sm:border-l sm:border-white/10 text-[11px]">
+                <span className="text-slate-400 font-mono">像素演化:</span>
+                <div className="inline-flex rounded bg-black/70 border border-white/10 p-0.5">
+                  {[
+                    { label: '12Hz 慢速', fps: 12 },
+                    { label: '32Hz 疾速', fps: 32 },
+                    { label: '60Hz 极速', fps: 60 },
+                    { label: '100Hz 极限', fps: 100 },
+                  ].map((speed) => (
+                    <button
+                      key={speed.fps}
+                      onClick={() => setLifeFps(speed.fps)}
+                      className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-mono text-[10px] ${
+                        lifeFps === speed.fps
+                          ? 'bg-[#D4FF00] text-black font-bold shadow-xs'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {speed.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setSeedTrigger((prev) => prev + 1)}
+                  title="散布新生滑翔机与生命群落"
+                  className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-200 text-[10px] font-mono cursor-pointer transition-colors"
+                >
+                  ⚡ 注入生命脉冲
+                </button>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-slate-400 flex items-center gap-2">
+              <span>DCE.LH FUTURES + CRAWLER AUTO-PERSIST</span>
+              <button
+                onClick={() => handleSetViewMode('classic')}
+                className="text-[#2000E0] hover:text-[#3B14FF] bg-white/10 px-2 py-0.5 rounded cursor-pointer ml-1 font-semibold"
+              >
+                [切换经典留档终端]
+              </button>
+            </div>
           </div>
-          <div className="text-[11px] text-slate-400">
-            数据源：大连商品交易所(DCE)生猪期货 + 搜猪网全国均价 + 东方财富/新浪A股实时数据
-          </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
 
       {/* 弹窗组件 */}
       <WebhookConfigModal
@@ -503,6 +743,25 @@ export default function App() {
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
         onApplyMetrics={handleApplyMicroMetrics}
+      />
+
+      <PolicyNewsModal
+        isOpen={isPolicyModalOpen}
+        onClose={() => setIsPolicyModalOpen(false)}
+        newsList={data.latestPolicyNews || []}
+        onRefreshNews={handleRefreshPolicyNews}
+        isRefreshing={isRefreshingPolicy}
+      />
+
+      <FrozenInventoryModal
+        isOpen={isFrozenModalOpen}
+        onClose={() => setIsFrozenModalOpen(false)}
+        currentRate={data.microData?.frozenInventoryRate}
+        frozenMeta={data.microData?.metricsMeta?.frozenInventory}
+        weeklyHistory={data.microData?.weeklyHistory}
+        isPersisted={data.microData?.isPersisted ?? true}
+        lastPersistedTime={data.microData?.lastPersistedTime}
+        onUpdateFrozenRate={handleUpdateFrozenRate}
       />
 
       <OpenSourceModal

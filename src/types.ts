@@ -1,3 +1,38 @@
+export interface DecoupledMetricMeta {
+  frequency: 'daily' | 'weekly' | 'monthly';
+  freqLabel: '日度高频' | '周度基准' | '月度统计';
+  updatedAt: string;         // 更新时间，例如 "08:30"
+  publishDate: string;       // 真实发布日期，例如 "2026-09-11" 或 "2026-09-07"
+  isToday: boolean;          // 是否为今日最新
+  relativeText: string;      // 例如 "今日最新" 或 "周度基准 (09-07)"
+  updateBadge?: string;      // 例如 "[今日最新 (08:30)]" 或 "[周度基准 (09-07 抽样)]"
+  source: string;            // 例如 "华泰期货·生猪早评"、"钢联农产品周度抽样"
+  unitConversionNote?: string; // 例如 "原文为大肥溢价三毛/斤，自动换算为0.60元/kg"
+}
+
+export interface LlmExtractionResult {
+  standardFatDiff: number | null;
+  diffTrend: 'narrowing' | 'widening' | 'flat';
+  diffChange?: number | null;
+  diffUnitOriginal?: string;
+  diffConversionFormula?: string;
+  avgSlaughterWeight: number | null;
+  secondFatteningRate: number | null;
+  secondFatteningSentiment: string;
+  slaughterOperatingRate: number | null;
+  frozenInventoryRate: number | null;
+  spotPriceKg?: number | null;
+  reportDate: string;
+  reportTime?: string;
+  reportSource: string;
+  reportTitle: string;
+  summary: string;
+  isWeeklyBenchmark: boolean;
+  frequencyType: 'daily' | 'weekly' | 'mixed';
+  confidence: number;
+  extractedVia: string;
+}
+
 export interface HogFuturesContract {
   code: string;           // 'nf_LH0' | 'nf_LH2611' | 'nf_LH2701' etc.
   symbol: string;         // 'LH0' | 'LH2611' | 'LH2701'
@@ -14,6 +49,18 @@ export interface HogFuturesContract {
   date?: string;
   time?: string;
   isMain?: boolean;
+}
+
+export interface WeeklyHistoryRecord {
+  weekLabel: string;               // 例如 "2026-W37 (09-11)"
+  date: string;                    // 例如 "2026-09-11"
+  frozenInventoryRate: number;     // 冻品库容率 %
+  slaughterOperatingRate?: number; // 屠宰开工率 %
+  avgSlaughterWeight?: number;     // 出栏均重 kg
+  secondFatteningRate?: number;    // 二育占比 %
+  source?: string;                 // 数据来源说明
+  note?: string;                   // 产业备注
+  updatedAt?: string;              // 记录入库时间
 }
 
 export interface HogMarketData {
@@ -98,6 +145,8 @@ export interface HogMarketData {
     diffTrend?: 'narrowing' | 'widening' | 'flat'; // 标肥差环比趋势 (收窄/走扩/持平)
     diffChange?: number;                 // 标肥差环比变动 (如 -0.23元/kg)
     diffPrev?: number;                   // 前期峰值/对比值
+    diffUnitOriginal?: string;           // 原文计量单位 (如 "大肥溢价三毛/斤")
+    diffConversionFormula?: string;      // 换算公式 (如 "三毛/斤 × 2 = 0.60元/kg")
     standardFatStatus: 'high_premium' | 'moderate_premium' | 'flat' | 'inverted' | 'unknown';
     standardFatStatusText: string;     // 例如 "大猪溢价收窄·二育转为谨慎观望"
     standardFatSubText?: string;       // 产业辅助说明
@@ -117,6 +166,18 @@ export interface HogMarketData {
     relativeDateText?: string;         // 相对时间描述，例如 "2天前发布 (09-07)"
     reportDateNotice?: string;         // 例如 "原文推送于 2天前 (2026-09-07 08:30)"
     extractedSnippet: string;          // 命中的关键研报原文
+    // 解耦异步更新独立元数据映射 (日度高频 vs 周度基准，支持单指标局部刷新)
+    metricsMeta?: {
+      standardFat?: DecoupledMetricMeta;
+      avgWeight?: DecoupledMetricMeta;
+      secondFattening?: DecoupledMetricMeta;
+      slaughterOperating?: DecoupledMetricMeta;
+      frozenInventory?: DecoupledMetricMeta;
+      spotPrice?: DecoupledMetricMeta;
+    };
+    weeklyHistory?: WeeklyHistoryRecord[];
+    isPersisted?: boolean;
+    lastPersistedTime?: string;
   };
   // 交易所真实交易状态
   marketStatus?: {
@@ -130,6 +191,7 @@ export interface HogMarketData {
   hasPriceChanged?: boolean;   // 本次刷新价格是否有真实变动
   isRealTime: boolean;
   dataSourceNote: string;
+  latestPolicyNews?: PolicyNewsItem[]; // 华储网中央储备肉与发改委 7x24 政策快讯
 }
 
 export interface TickHistoryItem {
@@ -239,5 +301,25 @@ export interface YongyiOcrResult {
     weightStatusText: string;
     secondFatteningSentiment: string;
   };
+}
+
+// 华储网官方公告与金十/新浪 7x24 政策快讯事件
+export interface PolicyNewsItem {
+  id: string;
+  title: string;
+  content: string;
+  source: string;              // 例如 '华储网官网' | '金十快讯' | '新浪财经7x24' | '国家发改委'
+  publishTime: string;         // 时间戳，例如 '19:05:57'
+  publishDate: string;         // 日期，例如 '2026-09-11'
+  fullTimestamp: string;       // 完整时间，例如 '2026-09-11 19:05:57'
+  category: '抛储/出库' | '收储/入库' | '发改委预警' | '华储网公告' | '综合政策';
+  tonnage?: number | null;     // 挂牌吨数，例如 12900 或 15500
+  targetDate?: string;         // 竞价出库交易日期，例如 '2026年9月16日'
+  meatType?: string;           // 例如 '国产冻猪肉' | '中央储备冻猪肉'
+  direction: 'bearish' | 'bullish' | 'neutral'; // 市场预期: 抛储增加供应偏空 / 收储托底偏多 / 中性
+  directionLabel: string;      // 例如 '出库抛储 12900吨 · 短期增加投放'
+  impactAnalysis: string;      // 产业量化分析，例如 '增加现货与盘面抛压，重点关注竞价底价与成交率'
+  isUrgent?: boolean;          // 是否重大紧急事件
+  rawUrl?: string;             // 原文链接
 }
 

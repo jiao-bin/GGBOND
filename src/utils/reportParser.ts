@@ -1,6 +1,9 @@
+import dayjs from 'dayjs';
+import { LlmExtractionResult } from '../types';
+
 /**
- * 生猪产业商业级微观数据（标肥价差、出栏均重、二育占比）早报提取工具
- * 支持微信公众号 (我的钢铁网农产品、卓创农业、猪易通、搜猪网) 晨报正则抽取
+ * 生猪产业商业级微观数据（标肥价差、出栏均重、二育占比、冻品库容）早报提取工具
+ * 支持各大期货研报、Mysteel、卓创资讯、中国养猪网行情正则抽取与安全防御清洗
  */
 
 export interface MicroMetrics {
@@ -29,6 +32,40 @@ function getBeijingDateStr(): string {
   const now = new Date();
   const beijingTime = new Date(now.getTime() + (now.getTimezoneOffset() + 480) * 60000);
   return beijingTime.toISOString().slice(0, 10);
+}
+
+/**
+ * 金融级“合理性断言防御”（Data Sanity Guardrails）
+ * 强制增加合理性边界校验（Range Validation）。如果提取值不在合理范围内，
+ * 强制判定为提取失败并告警，严禁入库。
+ */
+export const VALIDATION_RULES: Record<string, [number, number]> = {
+  spot_price: [8.0, 30.0],          // 生猪现货均价必须在 8 ~ 30 元/kg 之间，绝不可能为 1 元/kg
+  weight: [110.0, 145.0],           // 出栏均重必须在 110 ~ 145 kg 之间
+  fat_standard_diff: [-2.0, 5.0],   // 标肥价差必须在 -2.0 ~ 5.0 元/kg 之间
+  slaughter_rate: [10.0, 60.0],     // 屠企开工率必须在 10% ~ 60% 之间
+  frozen_storage: [10.0, 50.0],     // 冻品库容率必须在 10% ~ 50% 之间（绝不可能为 1.0%）
+  secondary_fattening: [0.0, 30.0], // 二育占比必须在 0% ~ 30% 之间
+};
+
+export function validateAndSave(data: Record<string, any>): { valid: boolean } {
+  for (const [key, [minVal, maxVal]] of Object.entries(VALIDATION_RULES)) {
+    let val: number | null | undefined = data[key];
+    if (val === undefined || val === null) {
+      if (key === 'spot_price') val = data.spotPriceKg ?? data.spot_price;
+      else if (key === 'weight') val = data.avgSlaughterWeight ?? data.avgWeight ?? data.weight;
+      else if (key === 'fat_standard_diff') val = data.standardFatDiff ?? data.fat_standard_diff;
+      else if (key === 'slaughter_rate') val = data.slaughterOperatingRate ?? data.slaughterRate ?? data.slaughter_rate;
+      else if (key === 'frozen_storage') val = data.frozenInventoryRate ?? data.frozen_storage;
+      else if (key === 'secondary_fattening') val = data.secondFatteningRate ?? data.secondary_fattening;
+    }
+    if (val !== undefined && val !== null && typeof val === 'number') {
+      if (!(minVal <= val && val <= maxVal)) {
+        throw new Error(`【异常脏数据阻断】字段 ${key} 提取值 ${val} 严重偏离产业合理区间 [${minVal}, ${maxVal}]！拒绝入库。`);
+      }
+    }
+  }
+  return { valid: true };
 }
 
 export function extractMicroMetricsFromText(text: string): MicroMetrics {
@@ -92,12 +129,13 @@ export function extractMicroMetricsFromText(text: string): MicroMetrics {
     result.dateNotice = '原文正文未检测到明确日期标签，需核实发布时间';
   }
 
-  // 1. 正则提取全国外三元生猪现货均价 (元/kg, 支持严格语义，绝不强行匹配其他数字)
-  const spotRegex = /(?:全国外三元均价|全国生猪均价|生猪出栏均价|全国出栏生猪价格|全国出栏均价|全国生猪出栏价格|生猪现货均价|全国外三元生猪出栏均价|全国外三元生猪市场均价|全国外三元生猪市场出栏均价|外三元生猪均价|外三元均价|生猪外三元均价|全国外三元出栏均价|外三元出栏均价|出栏均价)(?:为|在|达|约|约为|报)?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:元(?:\/kg|\/公斤)?|块)/i;
-  const spotMatch = text.match(spotRegex);
+  // 1. 正则提取生猪现货均价 (必须匹配生猪/外三元/出栏价，且排除变化幅度词，杜绝“1元/kg”事故)
+  // price_pattern = r"(?:外三元|生猪|出栏|现货)(?:均价|价格|报价)?[^\d]{0,10}?(1[0-2]\.\d{1,2}|[8-9]\.\d{1,2})\s*(?:元/公斤|元/kg)"
+  const priceRegex = /(?:外三元|生猪|出栏|现货)(?:均价|价格|报价)?[^\d]{0,10}?(1[0-2]\.\d{1,2}|[8-9]\.\d{1,2})\s*(?:元\/公斤|元\/kg)/i;
+  const spotMatch = text.match(priceRegex);
   if (spotMatch) {
     const val = parseFloat(spotMatch[1]);
-    if (val >= 6 && val <= 35) {
+    if (val >= VALIDATION_RULES.spot_price[0] && val <= VALIDATION_RULES.spot_price[1]) {
       result.spotPriceKg = val;
       const idx = text.indexOf(spotMatch[0]);
       const start = Math.max(0, idx - 15);
@@ -127,11 +165,11 @@ export function extractMicroMetricsFromText(text: string): MicroMetrics {
   }
 
   // 3. 正则提取出栏均重 (kg, 严格限定语义，未提及不设默认值)
-  const weightRegex = /(?:出栏均重|出栏平均体重|生猪出栏均重|样本出栏均重|出栏均重统计|宰前均重|出栏体重|平均交易体重)(?:为|在|达|约|约为|增至|降至)?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:公?斤|kg)/i;
+  const weightRegex = /(?:出栏均重|出栏平均体重|生猪出栏均重|样本出栏均重|出栏均重统计|宰前均重|出栏体重|平均交易体重)(?:\s*(?:维持在|报|达到|位于|为|在|达|约|约为|增至|降至))?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:公?斤|kg)/i;
   const weightMatch = text.match(weightRegex);
   if (weightMatch) {
     const wVal = parseFloat(weightMatch[1]);
-    if (wVal >= 100 && wVal <= 160) {
+    if (wVal >= VALIDATION_RULES.weight[0] && wVal <= VALIDATION_RULES.weight[1]) {
       result.avgWeight = wVal;
       const idx = text.indexOf(weightMatch[0]);
       const start = Math.max(0, idx - 15);
@@ -142,7 +180,7 @@ export function extractMicroMetricsFromText(text: string): MicroMetrics {
   }
 
   // 4. 正则提取二育占比 (%/率)
-  const secondFatteningRegex = /(?:二育占比|二次育肥占比|二育入场占比|二育销量占比|二次育肥入场率|二育出栏占比|二育入场率)(?:为|在|达|约|约为)?\s*([0-9]+(?:\.[0-9]+)?)\s*%/i;
+  const secondFatteningRegex = /(?:二育占比|二次育肥占比|二育入场占比|二育销量占比|二次育肥入场率|二育出栏占比|二育入场率)(?:\s*(?:为|在|达|约|约为|达到))?\s*([0-9]+(?:\.[0-9]+)?)\s*%/i;
   const secondFatteningMatch = text.match(secondFatteningRegex);
   if (secondFatteningMatch) {
     result.secondFatteningRate = parseFloat(secondFatteningMatch[1]);
@@ -154,7 +192,7 @@ export function extractMicroMetricsFromText(text: string): MicroMetrics {
   }
 
   // 5. 正则提取屠宰开工率 (%/率)
-  const slaughterRegex = /(?:屠宰开工率|屠宰企业开工率|重点屠企开工率|开工率)(?:为|在|达|约|约为)?\s*([0-9]+(?:\.[0-9]+)?)\s*%/i;
+  const slaughterRegex = /(?:屠宰开工率|屠宰企业开工率|重点屠企开工率|重点屠宰企业开工率|开工率)(?:\s*(?:维持在|报|达到|位于|为|在|达|约|约为))?\s*([0-9]+(?:\.[0-9]+)?)\s*%/i;
   const slaughterMatch = text.match(slaughterRegex);
   if (slaughterMatch) {
     result.slaughterRate = parseFloat(slaughterMatch[1]);
@@ -165,6 +203,217 @@ export function extractMicroMetricsFromText(text: string): MicroMetrics {
   }
 
   return result;
+}
+
+// 智能本地语义换算引擎（废弃死板单一正则，支持口语行话“大肥溢价三毛”与单位自动折算）
+export function extractSemanticMetricsFallback(
+  text: string,
+  reportTitle: string = '',
+  reportSource: string = '生猪早评专栏'
+): LlmExtractionResult {
+  const result: LlmExtractionResult = {
+    standardFatDiff: null,
+    diffTrend: 'narrowing',
+    diffChange: null,
+    diffUnitOriginal: undefined,
+    diffConversionFormula: undefined,
+    avgSlaughterWeight: null,
+    secondFatteningRate: null,
+    secondFatteningSentiment: '二育情绪中性观望',
+    slaughterOperatingRate: null,
+    frozenInventoryRate: null,
+    spotPriceKg: null,
+    reportDate: getBeijingDateStr(),
+    reportTime: '08:30',
+    reportSource: reportSource || '华泰期货/钢联生猪早评',
+    reportTitle: reportTitle || '生猪产业链晨报',
+    summary: '',
+    isWeeklyBenchmark: false,
+    frequencyType: 'daily',
+    confidence: 85,
+    extractedVia: 'smart-nlp-fallback',
+  };
+
+  if (!text || typeof text !== 'string') return result;
+
+  // 1. 日期提取
+  const dateM = text.match(/(20\d{2})[-/年](\d{1,2})[-/月](\d{1,2})(?:日)?(?:\s*(\d{1,2}:\d{2}))?/i);
+  if (dateM) {
+    result.reportDate = `${dateM[1]}-${String(parseInt(dateM[2], 10)).padStart(2, '0')}-${String(parseInt(dateM[3], 10)).padStart(2, '0')}`;
+    if (dateM[4]) result.reportTime = dateM[4];
+  } else {
+    const shortDateM = text.match(/(\d{1,2})月(\d{1,2})日(?:\s*(\d{1,2}:\d{2}))?/i);
+    if (shortDateM) {
+      result.reportDate = `${new Date().getFullYear()}-${String(parseInt(shortDateM[1], 10)).padStart(2, '0')}-${String(parseInt(shortDateM[2], 10)).padStart(2, '0')}`;
+      if (shortDateM[3]) result.reportTime = shortDateM[3];
+    }
+  }
+
+  // 2. 标肥价差与口语行话换算
+  // 匹配中文口语：三毛/两毛/四毛/五毛/八毛/三毛五/四毛五
+  const oralMaoMap: Record<string, number> = {
+    '一毛': 0.1,
+    '两毛': 0.2,
+    '二毛': 0.2,
+    '两毛五': 0.25,
+    '三毛': 0.3,
+    '三毛五': 0.35,
+    '四毛': 0.4,
+    '四毛五': 0.45,
+    '五毛': 0.5,
+    '六毛': 0.6,
+    '六毛五': 0.65,
+    '七毛': 0.7,
+    '八毛': 0.8,
+    '九毛': 0.9,
+    '一块': 1.0,
+  };
+
+  // 检测口语行话：大肥溢价三毛 / 大猪较标猪溢价约0.31元/斤 / 肥标差收窄至0.60
+  const oralPattern = /(?:大肥|肥猪|大猪)(?:较标猪|比标猪)?(?:溢价|高出|高|折价|贴水)?(?:约|达)?([一二两三四五六七八九]毛[五]?|一块)/;
+  const oralMatch = text.match(oralPattern);
+
+  if (oralMatch && oralMaoMap[oralMatch[1]]) {
+    const jinPrice = oralMaoMap[oralMatch[1]];
+    const kgPrice = +(jinPrice * 2).toFixed(2);
+    const isInverted = /(?:贴水|折价|倒挂)/.test(oralMatch[0]);
+    result.standardFatDiff = isInverted ? -kgPrice : kgPrice;
+    result.diffUnitOriginal = `${oralMatch[1]}/斤`;
+    result.diffConversionFormula = `识别到产业行话“${oralMatch[0]}”，按生猪现货 1公斤=2市斤 规则自动换算: ${jinPrice}元/斤 × 2 = ${kgPrice.toFixed(2)}元/kg`;
+  } else {
+    // 匹配常规数字
+    const diffNumPattern = /(?:标肥价差|标肥差|肥标价差|肥标差|大猪较标猪溢价|大肥溢价|肥标差价)(?:维持在|走阔至|收窄至|扩大至|升至|降至|为|在|达|约|约为|高)?\s*([+-]?[0-9]+(?:\.[0-9]+)?)\s*(元\/kg|元\/公斤|元\/斤|块\/斤|毛\/斤|毛|块)?/i;
+    const diffM = text.match(diffNumPattern);
+    if (diffM) {
+      let rawVal = parseFloat(diffM[1]);
+      const unit = (diffM[2] || '').toLowerCase();
+      if (unit.includes('斤') || unit === '毛') {
+        const orig = rawVal;
+        rawVal = +(rawVal * 2).toFixed(2);
+        result.standardFatDiff = rawVal;
+        result.diffUnitOriginal = `${orig}元/斤`;
+        result.diffConversionFormula = `原文为 ${orig}元/斤，自动按 1kg=2市斤 折算为 ${rawVal.toFixed(2)}元/kg`;
+      } else {
+        result.standardFatDiff = rawVal;
+        result.diffUnitOriginal = `${rawVal}元/kg`;
+        result.diffConversionFormula = `原文为标准计量单位 ${rawVal.toFixed(2)}元/kg`;
+      }
+    }
+  }
+
+  // 标肥差走势判断
+  if (/(?:收窄|回落|下降|收缩|缩小|承压|支撑下降|走低)/.test(text)) {
+    result.diffTrend = 'narrowing';
+  } else if (/(?:走扩|扩大|拉大|上升|走高|抬升|扩大至)/.test(text)) {
+    result.diffTrend = 'widening';
+  } else if (/(?:平水|持平|维持平稳)/.test(text)) {
+    result.diffTrend = 'flat';
+  }
+
+  // 3. 出栏均重
+  const weightM = text.match(/(?:出栏均重|出栏平均体重|生猪出栏均重|样本出栏均重|出栏均重统计|宰前均重|出栏体重|平均交易体重)(?:\s*(?:维持在|报|达到|位于|为|在|达|约|约为|增至|降至))?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:公?斤|kg)/i);
+  if (weightM) {
+    const wVal = parseFloat(weightM[1]);
+    if (wVal >= VALIDATION_RULES.weight[0] && wVal <= VALIDATION_RULES.weight[1]) {
+      result.avgSlaughterWeight = wVal;
+    }
+  }
+
+  // 4. 二育占比
+  const secondFatM = text.match(/(?:二育占比|二次育肥占比|二育入场占比|二育销量占比|二次育肥入场率|二育出栏占比|二育入场率)(?:\s*(?:为|在|达|约|约为|达到))?\s*([0-9]+(?:\.[0-9]+)?)\s*%/i);
+  if (secondFatM) {
+    const sfVal = parseFloat(secondFatM[1]);
+    if (sfVal >= VALIDATION_RULES.secondary_fattening[0] && sfVal <= VALIDATION_RULES.secondary_fattening[1]) {
+      result.secondFatteningRate = sfVal;
+    }
+  }
+
+  // 5. 屠宰开工率与冻品库容
+  const slM = text.match(/(?:屠宰开工率|屠宰企业开工率|重点屠企开工率|重点屠宰企业开工率|开工率)(?:\s*(?:维持在|报|达到|位于|在|为|约|约为))?\s*([0-9]+(?:\.[0-9]+)?)\s*%/i);
+  if (slM) {
+    const slVal = parseFloat(slM[1]);
+    if (slVal >= VALIDATION_RULES.slaughter_rate[0] && slVal <= VALIDATION_RULES.slaughter_rate[1]) {
+      result.slaughterOperatingRate = slVal;
+    }
+  }
+
+  // 重构库容提取正则：必须排除“变动/下滑/增加/上升/个百分点”，精确匹配绝对库容率
+  // frozen_pattern = r"(?:冻品库容率|重点屠宰企业冻品库容)[^\d%]{0,10}?([2-4]\d(?:\.\d{1,2})?)\s*%"
+  const frozenRegex = /(?:冻品库容率|重点屠宰企业冻品库容)[^\d%]{0,10}?([2-4]\d(?:\.\d{1,2})?)\s*%/i;
+  const frM = text.match(frozenRegex);
+  if (frM) {
+    const frVal = parseFloat(frM[1]);
+    if (frVal >= VALIDATION_RULES.frozen_storage[0] && frVal <= VALIDATION_RULES.frozen_storage[1]) {
+      result.frozenInventoryRate = +frVal.toFixed(2);
+    }
+  }
+
+  // 6. 重构现货价格正则提取器 (必须匹配生猪/外三元/出栏价，且排除变化幅度词，杜绝“1元/kg”截断事故)
+  // price_pattern = r"(?:外三元|生猪|出栏|现货)(?:均价|价格|报价)?[^\d]{0,10}?(1[0-2]\.\d{1,2}|[8-9]\.\d{1,2})\s*(?:元/公斤|元/kg)"
+  const priceRegex = /(?:外三元|生猪|出栏|现货)(?:均价|价格|报价)?[^\d]{0,10}?(1[0-2]\.\d{1,2}|[8-9]\.\d{1,2})\s*(?:元\/公斤|元\/kg)/i;
+  const spotM = text.match(priceRegex);
+  if (spotM) {
+    const sVal = parseFloat(spotM[1]);
+    if (sVal >= VALIDATION_RULES.spot_price[0] && sVal <= VALIDATION_RULES.spot_price[1]) {
+      result.spotPriceKg = sVal;
+    }
+  }
+
+  // 7. 解耦属性研判：识别周度样本 vs 日度高频
+  const hasWeeklyKeyword = /(?:周度|周报|周环比|截至\d+月\d+日|样本周度|钢联数据|周度样本)/.test(text);
+  const hasDailyKeyword = /(?:今日早评|今日晨报|今日现货|早盘快讯|晨间推文|日度)/.test(text);
+
+  if (hasWeeklyKeyword && !hasDailyKeyword) {
+    result.isWeeklyBenchmark = true;
+    result.frequencyType = 'weekly';
+  } else if (hasDailyKeyword && hasWeeklyKeyword) {
+    result.isWeeklyBenchmark = false;
+    result.frequencyType = 'mixed'; // 例如：今日晨报引用了周度均重样本
+  } else {
+    result.isWeeklyBenchmark = false;
+    result.frequencyType = 'daily';
+  }
+
+  // 二育情绪深度研判
+  if (result.diffTrend === 'narrowing' || /(?:谨慎|谨慎为主|观望|难以放大|放缓|降温)/.test(text)) {
+    result.secondFatteningSentiment = '价差收窄·二育情绪转为谨慎观望';
+  } else if (result.diffTrend === 'widening' && (result.standardFatDiff ?? 0) >= 0.6) {
+    result.secondFatteningSentiment = '价差走扩·二育积极入场截流';
+  } else {
+    result.secondFatteningSentiment = '二育入场温和·按部就班';
+  }
+
+  result.summary = `【语义智能解析】${result.standardFatDiff !== null ? `标肥差${result.standardFatDiff > 0 ? '+' : ''}${result.standardFatDiff}元/kg(${result.diffTrend === 'narrowing' ? '收窄' : '走扩'})` : ''}${result.avgSlaughterWeight ? `，出栏均重${result.avgSlaughterWeight}kg` : ''}${result.secondFatteningRate ? `，二育占比${result.secondFatteningRate}%` : ''}。${result.secondFatteningSentiment}`;
+
+  return result;
+}
+
+
+// 必须严格基于【原文发布时间 article.publish_date】，而非【系统抓取运行时间】判定徽章
+export function computeMetricBadge(
+  publishDate?: string,
+  timeStr?: string,
+  defaultFreqLabel: string = '周度基准'
+): {
+  isToday: boolean;
+  text: string;
+  color: 'green' | 'blue';
+  diffDays: number;
+} {
+  if (!publishDate) {
+    return { isToday: false, text: `${defaultFreqLabel} (样本前值)`, color: 'blue', diffDays: 99 };
+  }
+
+  // 严格基于原文发布时间判定是否为今日
+  const isToday = dayjs(publishDate).isSame(dayjs(), 'day');
+
+  if (isToday) {
+    const timeSuffix = timeStr ? ` (${timeStr})` : '';
+    return { isToday: true, text: `今日最新${timeSuffix}`, color: 'green', diffDays: 0 };
+  } else {
+    const diffDays = Math.max(1, dayjs().diff(dayjs(publishDate), 'day'));
+    return { isToday: false, text: `${defaultFreqLabel} (${diffDays}天前)`, color: 'blue', diffDays };
+  }
 }
 
 // 动态计算相对时间与发布标签 (杜绝“今日发布”与实际日期脱节)
@@ -178,19 +427,14 @@ export function formatPublishRelativeDate(dateStr?: string, timeStr?: string): {
     return { isToday: false, relativeText: '历史研报', badgeType: 'history', daysAgo: 99 };
   }
 
-  const todayStr = getBeijingDateStr();
-  const [ty, tm, td] = todayStr.split('-').map(Number);
-  const tDate = new Date(ty, tm - 1, td);
+  const isToday = dayjs(dateStr).isSame(dayjs(), 'day');
+  if (isToday) {
+    const timeSuffix = timeStr ? ` (${timeStr})` : '';
+    return { isToday: true, relativeText: `今日晨报${timeSuffix}`, badgeType: 'today', daysAgo: 0 };
+  }
 
-  const [py, pm, pd] = dateStr.split('-').map(Number);
-  const pDate = new Date(py, pm - 1, pd);
-
-  const diffMs = tDate.getTime() - pDate.getTime();
-  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays <= 0) {
-    return { isToday: true, relativeText: '今日晨报', badgeType: 'today', daysAgo: 0 };
-  } else if (diffDays === 1) {
+  const diffDays = Math.max(1, dayjs().diff(dayjs(dateStr), 'day'));
+  if (diffDays === 1) {
     return { isToday: false, relativeText: '昨日发布 (1天前)', badgeType: 'yesterday', daysAgo: 1 };
   } else if (diffDays === 2) {
     return { isToday: false, relativeText: `2天前发布 (${dateStr.slice(5)})`, badgeType: 'daysAgo', daysAgo: 2 };
@@ -302,19 +546,41 @@ export interface MorningReportPreset {
 
 export const PRESET_MORNING_REPORTS: MorningReportPreset[] = [
   {
-    id: 'huatai-20260909',
-    accountName: '华泰期货 (期货公司今日生猪早评)',
-    sourceType: '期货公司晨评 (纯文本快讯流)',
-    originalPublishDate: '2026-09-09',
+    id: 'huatai-oral-today',
+    accountName: '华泰期货 (生猪晨会早评专栏)',
+    sourceType: '期货公司晨评 (产业长文与行话)',
+    originalPublishDate: '2026-09-11',
     originalPublishTime: '08:30',
     isToday: true,
-    title: '【华泰期货·生猪市场晨评】现货窄幅震荡，肥标价差支撑下降收窄至0.60元/kg',
-    summary: '华泰期货今日晨报快讯流：现货价格窄幅震荡，肥标价差近期支撑下降收窄至0.60元/kg，二次育肥入场情绪谨慎为主，短期内预计难以放大规模，出栏均重122.94kg，二育占比8.6%...',
-    rawContent: `【华泰期货·生猪市场晨报（2026年9月9日 08:30发布）】
-生猪现货价格窄幅震荡，全国均价小幅企稳。养殖端出栏量环比回升，肥标价差近期支撑下降，收窄至 0.60 元/kg。
-二次育肥入场情绪以谨慎为主，短期内预计难以放大规模，养殖端存在双节前主动压栏增重与大猪顺势出栏交织预期。
-全国外三元生猪出栏均重为 122.94 公斤，二育入场占比约为 8.6%，屠宰企业开工率 29.59%，重点屠宰企业冻品库容率 32.30%。
-盘面中性震荡，建议关注中秋消费提振及二育出栏心态变化。`,
+    title: '【华泰期货·今日早评】大肥溢价三毛，标肥差支撑下降收窄至0.60元/kg',
+    summary: '包含产业行话“大肥溢价三毛”与解耦更新：标肥差按今日高频更新至0.60元/kg，出栏均重122.94kg按周度基准保持...',
+    rawContent: `【华泰期货·生猪市场今日晨报（2026年9月11日 08:30发布）】
+今日生猪现货价格窄幅震荡，主产区大肥较标猪溢价约三毛/斤（大肥溢价三毛，折合标肥差 0.60 元/kg）。
+近期大肥溢价支撑有所下降，二次育肥入场情绪以谨慎为主，短期内预计难以放大规模。
+全国生猪出栏均重维持在 122.94 公斤（采用钢联周度样本统计基准），二育入场占比约为 8.6%，屠宰企业开工率 29.59%，重点屠宰企业冻品库容率 32.30%。
+盘面中性震荡，重点关注中秋临近终端白条走货及二育大猪出栏心态变化。`,
+    expectedSpot: undefined,
+    expectedDiff: 0.60,
+    diffTrend: 'narrowing',
+    expectedWeight: 122.94,
+    expectedSecondFattening: 8.6,
+  },
+  {
+    id: 'mysteel-daily-pig',
+    accountName: '我的钢铁网 (Mysteel生猪日评专栏)',
+    sourceType: '我的钢铁网 (Mysteel农产品深度专栏)',
+    originalPublishDate: '2026-09-11',
+    originalPublishTime: '08:35',
+    isToday: true,
+    title: '【我的钢铁网·Mysteel生猪日评】标肥价差收窄至0.60元/kg，散户出栏加快二育补栏放缓',
+    summary: '我的钢铁网（Mysteel）生猪日度深度长文：现货标肥价差收窄至0.60元/kg，屠企收购价微跌，二育入场意愿转弱...',
+    rawContent: `【我的钢铁网·Mysteel生猪产业链日评（2026年9月11日 08:35专栏）】
+一、现货行情速递与标肥差追踪：
+今日早间全国外三元生猪出栏均价小幅调整，局部大猪出栏积极性提升。
+标肥价差收窄至 0.60 元/kg（部分散户反馈大猪较标猪高三毛/斤）。前期压栏及二次育肥大猪集中顺势出栏，大猪阶段性供应偏宽松，肥标价差支撑有所松动。
+二、周度样本跟踪与情绪研判：
+根据钢联周度监测样本，全国商品猪出栏均重为 122.94 公斤，二次育肥占比 8.6%。
+由于肥标差继续走窄，二育入场意愿转为谨慎观望，短期投机性截留减弱。重点屠企开工率 29.59%，冻品库容率 32.30%。`,
     expectedSpot: undefined,
     expectedDiff: 0.60,
     diffTrend: 'narrowing',
@@ -324,7 +590,7 @@ export const PRESET_MORNING_REPORTS: MorningReportPreset[] = [
   {
     id: 'huatai-20260907',
     accountName: '华泰期货 (期货公司生猪早评)',
-    sourceType: '期货公司晨评 (纯文本快讯流)',
+    sourceType: '期货公司晨评 (公开推文)',
     originalPublishDate: '2026-09-07',
     originalPublishTime: '08:30',
     isToday: false,
@@ -340,6 +606,27 @@ export const PRESET_MORNING_REPORTS: MorningReportPreset[] = [
     diffTrend: 'narrowing',
     expectedWeight: 122.94,
     expectedSecondFattening: 8.8,
+  },
+  {
+    id: 'eastmoney-shengang',
+    accountName: '东方财富研报库 (申港证券·农林牧渔)',
+    sourceType: '东方财富网农林牧渔深度研报',
+    originalPublishDate: '2026-08-27',
+    originalPublishTime: '08:30',
+    isToday: false,
+    title: '【东方财富研报·申港证券】农林牧渔行业周报：出栏均重连续上涨，二育压栏或有回升',
+    summary: '东方财富网农林牧渔板块深度长文。出栏均重123.02kg、标肥价差-0.99元/kg、出栏均价11.07元/kg...',
+    rawContent: `【申港证券·农林牧渔行业研究周报 (发布日期: 2026年8月27日)】
+投资摘要：
+商品猪出栏均价周内震荡上涨。根据钢联数据，截至8月21日，商品猪出栏均价11.07元/kg，周环比上涨2.59%，周内猪价震荡上涨。
+近期标肥价差较大、肥猪价格优势明显，均重上行，养殖端压栏意愿或有增强，出栏节奏后移或阶段性利好出栏均价表现。
+出栏均重连续两周环比上涨，出栏节奏或有所放缓。根据钢联数据，截至8月21日，商品猪出栏均重123.02kg、周环比上涨0.22%，连续两周环比上涨。宰后均重92.27kg、周环比上涨0.01%。
+标肥价差周环比小幅收窄，屠宰冷冻库容率连续下降。根据钢联数据，截至8月21日，标肥价差为-0.99元/kg，较前一周小幅收窄，肥猪价格震荡走高且溢价处于较高水平，或推动二育压栏、出栏重心有望后移。
+生猪养殖：建议关注具有成本优势、业绩兑现度高的龙头企业牧原股份、温氏股份。`,
+    expectedSpot: 11.07,
+    expectedDiff: -0.99,
+    expectedWeight: 123.02,
+    expectedSecondFattening: undefined, // 严格缺失降级
   },
   {
     id: 'guosen-20260907',
